@@ -29,16 +29,13 @@ async function run(): Promise<void> {
         Tags.push(newTag);
       });
 
+      console.log(Tags);
 
       Tags.sort((a,b) => compareVersions(a.version, b.version));
 
       const lastTag = Tags[0];
       console.log("Last tag is: ", lastTag);
 
-      Tags.forEach( tag => {
-
-        console.log(tag.name);
-      });
 
     });
   

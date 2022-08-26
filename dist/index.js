@@ -63,12 +63,10 @@ function run() {
                     const newTag = new tag_1.Tag(element.name);
                     Tags.push(newTag);
                 });
+                console.log(Tags);
                 Tags.sort((a, b) => (0, compare_versions_1.compareVersions)(a.version, b.version));
                 const lastTag = Tags[0];
                 console.log("Last tag is: ", lastTag);
-                Tags.forEach(tag => {
-                    console.log(tag.name);
-                });
             });
         }
         catch (error) {
