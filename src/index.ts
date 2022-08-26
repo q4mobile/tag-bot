@@ -3,7 +3,7 @@ import github from "@actions/github";
 
 async function run() {
 
-  const context = github.context;
+  const context = github.;
   const token = core.getInput("token");
   const octokit = github.getOctokit(token);
   const repo = context.repo;
