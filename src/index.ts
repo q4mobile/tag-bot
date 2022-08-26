@@ -65,7 +65,7 @@ async function createTag(newTag: string) {
     repo: repo.repo,
     tag: newTag,
     message: "hi",
-    object: github.context.ref,
+    object: github.context.sha,
     type: "commit",
     tagger: { name: "Tag Bog", email:"tagbot@q4inc.com"}
   });
