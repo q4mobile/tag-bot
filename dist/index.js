@@ -46,20 +46,26 @@ const core = __importStar(__nccwpck_require__(2186));
 const github_1 = __importDefault(__nccwpck_require__(5438));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
-        const token = core.getInput("token");
-        console.log(github_1.default.context.eventName);
-        console.log(token);
-        //const octokit = github.getOctokit(token);
-        // console.log("hello?");
-        // console.log(repo.repo);
-        // const tags = await octokit.rest.repos.listTags({
-        //   owner: repo.owner,
-        //   repo: repo.repo
-        // });
-        // for (var tag in tags) {
-        //   console.log(tag);
-        //   core.info(tag);
-        // }
+        try {
+            const token = core.getInput("token");
+            console.log(github_1.default.context.eventName);
+            console.log(token);
+            //const octokit = github.getOctokit(token);
+            // console.log("hello?");
+            // console.log(repo.repo);
+            // const tags = await octokit.rest.repos.listTags({
+            //   owner: repo.owner,
+            //   repo: repo.repo
+            // });
+            // for (var tag in tags) {
+            //   console.log(tag);
+            //   core.info(tag);
+            // }
+        }
+        catch (error) {
+            if (error instanceof Error)
+                core.setFailed(error.message);
+        }
     });
 }
 run();
