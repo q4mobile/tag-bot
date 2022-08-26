@@ -10,35 +10,37 @@ const repo = github.context.repo;
 
 async function run(): Promise<void> {
   try {
-    let Tags: Array<Tag> = new Array<Tag>();
+    if (github.context.eventName == 'merged') {
+      let Tags: Array<Tag> = new Array<Tag>();
 
-    octokit.rest.repos.listTags({
-      owner: repo.owner,
-      repo: repo.repo
-    })
-    .then(async ({ data } ) => {
+      octokit.rest.repos.listTags({
+        owner: repo.owner,
+        repo: repo.repo
+      })
+        .then(async ({ data }) => {
 
-      if(data.length === 0) {
-        throw Error("No tags found in repository");
-      }
-      
-      data.forEach(element => {
-        const newTag = new Tag(element.name);
-        Tags.push(newTag);
-      });
+          if (data.length === 0) {
+            throw Error("No tags found in repository");
+          }
 
-      Tags.sort((a,b) => compareVersions(a.version, b.version));
+          data.forEach(element => {
+            const newTag = new Tag(element.name);
+            Tags.push(newTag);
+          });
 
-      const lastTag = Tags[Tags.length - 1];
-      console.log("The last tag in the repository is:", lastTag.version);
-      const newTag = GenerateNextTag(lastTag.version);
+          Tags.sort((a, b) => compareVersions(a.version, b.version));
 
-      console.log("Creating new tag in repository:", newTag)
-      const tag = await createTag(newTag);
-      const ref = await createRef("refs/tags/" + tag.data.tag, tag.data.sha)
+          const lastTag = Tags[Tags.length - 1];
+          console.log("The last tag in the repository is:", lastTag.version);
+          const newTag = GenerateNextTag(lastTag.version);
 
-      console.log("Created new tag", tag.data.tag);
-    });
+          console.log("Creating new tag in repository:", newTag)
+          const tag = await createTag(newTag);
+          const ref = await createRef("refs/tags/" + tag.data.tag, tag.data.sha)
+
+          console.log("Created new tag", tag.data.tag);
+        });
+    }
 
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
@@ -62,13 +64,13 @@ async function createTag(newTag: string) {
     message: "Created by Tag Bot",
     object: github.context.sha,
     type: "commit",
-    tagger: { name: "Tag Bog", email:"tagbot@q4inc.com"}
+    tagger: { name: "Tag Bog", email: "tagbot@q4inc.com" }
   });
 }
 
 function GenerateNextTag(lastTag: string) {
 
-  let previousTag: Array<number> = lastTag.split('.').map(function(item) {
+  let previousTag: Array<number> = lastTag.split('.').map(function (item) {
     return parseInt(item);
   });
 
