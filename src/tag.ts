@@ -1,10 +1,11 @@
 export class Tag {
 
-  name: string | undefined;
+  name: string;
+  version: string;
 
   constructor(tagName: string) {
     this.name = tagName;
-
+    this.version = this.name.substring(1);
   }
 }
 

@@ -1,6 +1,7 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Tag } from "./tag";
+import { compareVersions } from 'compare-versions';
 
 async function run(): Promise<void> {
   try {
@@ -28,7 +29,14 @@ async function run(): Promise<void> {
         Tags.push(newTag);
       });
 
+
+      Tags.sort((a,b) => compareVersions(a.version, b.version));
+
+      const lastTag = Tags[0];
+      console.log("Last tag is: ", lastTag);
+
       Tags.forEach( tag => {
+
         console.log(tag.name);
       });
 
