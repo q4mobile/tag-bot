@@ -64,7 +64,9 @@ function run() {
                 });
                 Tags.sort((a, b) => (0, compare_versions_1.compareVersions)(a.version, b.version));
                 const lastTag = Tags[Tags.length - 1];
-                console.log("Last tag is: ", lastTag);
+                console.log("Last tag is: ", lastTag.name);
+                const newTag = GenerateNextTag(lastTag.version);
+                console.log("New tag is", newTag);
             });
         }
         catch (error) {
@@ -72,6 +74,15 @@ function run() {
                 core.setFailed(error.message);
         }
     });
+}
+function GenerateNextTag(lastTag) {
+    let previousTag = lastTag.split('.');
+    let newTag = "{0}.{1}.{2}";
+    newTag.replace("{0}", previousTag[0]);
+    newTag.replace("{1}", previousTag[1] + 1);
+    newTag.replace("{2}", previousTag[2]);
+    newTag = "v" + newTag;
+    return newTag;
 }
 run();
 

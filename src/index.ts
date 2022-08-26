@@ -30,7 +30,9 @@ async function run(): Promise<void> {
       Tags.sort((a,b) => compareVersions(a.version, b.version));
 
       const lastTag = Tags[Tags.length - 1];
-      console.log("Last tag is: ", lastTag);
+      console.log("Last tag is: ", lastTag.name);
+      const newTag = GenerateNextTag(lastTag.version);
+      console.log("New tag is", newTag);
 
 
     });
@@ -40,4 +42,17 @@ async function run(): Promise<void> {
   }
 }
 
+function GenerateNextTag(lastTag: string) {
+
+  let previousTag: Array<string> = lastTag.split('.');
+
+  let newTag = "{0}.{1}.{2}";
+
+  newTag.replace("{0}", previousTag[0]);
+  newTag.replace("{1}", previousTag[1] + 1);
+  newTag.replace("{2}", previousTag[2]);
+  newTag = "v" + newTag
+
+  return newTag
+}
 run()
