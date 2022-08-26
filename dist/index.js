@@ -50,7 +50,6 @@ const repo = github.context.repo;
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            console.log(github.context.eventName);
             let Tags = new Array();
             octokit.rest.repos.listTags({
                 owner: repo.owner,

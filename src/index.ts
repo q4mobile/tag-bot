@@ -10,7 +10,6 @@ const repo = github.context.repo;
 
 async function run(): Promise<void> {
   try {
-    console.log(github.context.eventName);
     let Tags: Array<Tag> = new Array<Tag>();
 
     octokit.rest.repos.listTags({
