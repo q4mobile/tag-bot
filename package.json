@@ -1,0 +1,34 @@
+{
+  "name": "tag-bot",
+  "version": "1.1.0",
+  "description": "",
+  "main": "dist/index.js",
+  "engines": {
+    "node": "12.14.1"
+  },
+  "keywords": [],
+  "homepage": "",
+  "author": "Q4",
+  "license": "ISC",
+  "scripts": {
+    "test": "jest",
+    "build": "tsc",
+    "package": "ncc build --source-map",
+    "all": "npm run build && npm run package"
+  },
+  "dependencies": {
+    "@jest/reporters": "^27.5.1",
+    "csv-writer": "^1.6.0",
+    "lodash": "^4.17.21",
+    "typescript": "^4.7.4"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.5.2",
+    "@types/lodash": "^4.14.182",
+    "@types/node": "^13.7.1",
+    "@vercel/ncc": "^0.30.0",
+    "jest": "^27.5.1",
+    "ts-jest": "^27.1.5",
+    "ts-node": "^10.9.1"
+  }
+}
