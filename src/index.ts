@@ -7,12 +7,16 @@ async function run(): Promise<void> {
     const octokit = github.getOctokit(token);
     const repo = github.context.repo;
   
+
+    console.log(repo.owner);
+    console.log(repo.repo);
+
     const tags = await octokit.rest.repos.listTags({
       owner: repo.owner,
       repo: repo.repo
     });
   
-    for (var tag in tags) {
+    for (const tag in tags) {
       console.log(tag);
       core.info(tag);
     }
