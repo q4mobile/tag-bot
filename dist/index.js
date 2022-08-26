@@ -44,18 +44,18 @@ const github = __importStar(__nccwpck_require__(5438));
 const tag_1 = __nccwpck_require__(9297);
 const compare_versions_1 = __nccwpck_require__(4773);
 const version_1 = __nccwpck_require__(2792);
+const token = core.getInput("token");
+const octokit = github.getOctokit(token);
+const repo = github.context.repo;
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const token = core.getInput("token");
-            const octokit = github.getOctokit(token);
-            const repo = github.context.repo;
             let Tags = new Array();
             octokit.rest.repos.listTags({
                 owner: repo.owner,
                 repo: repo.repo
             })
-                .then(({ data }) => {
+                .then(({ data }) => __awaiter(this, void 0, void 0, function* () {
                 if (data.length === 0) {
                     throw Error("No tags found in repository");
                 }
@@ -68,12 +68,39 @@ function run() {
                 console.log("Last tag is: ", lastTag.name);
                 const newTag = GenerateNextTag(lastTag.version);
                 console.log("New tag is", newTag);
-            });
+                // create the tag octokit.createTag
+                const tag = yield createTag(newTag);
+                // create the ref octokit.createRef
+                yield createRef(github.context.ref, github.context.sha);
+            }));
         }
         catch (error) {
             if (error instanceof Error)
                 core.setFailed(error.message);
         }
+    });
+}
+function createRef(ref, sha) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield octokit.rest.git.createRef({
+            owner: repo.owner,
+            repo: repo.repo,
+            ref: ref,
+            sha: sha
+        });
+    });
+}
+function createTag(newTag) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield octokit.rest.git.createTag({
+            owner: repo.owner,
+            repo: repo.repo,
+            tag: newTag,
+            message: "hi",
+            object: github.context.ref,
+            type: "commit",
+            tagger: { name: "Tag Bog", email: "tagbot@q4inc.com" }
+        });
     });
 }
 function GenerateNextTag(lastTag) {

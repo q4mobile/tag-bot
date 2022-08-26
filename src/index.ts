@@ -3,20 +3,21 @@ import * as github from "@actions/github";
 import { Tag } from "./tag";
 import { compareVersions } from 'compare-versions';
 import { Version } from "./version";
+import { create } from "lodash";
+
+const token = core.getInput("token");
+const octokit = github.getOctokit(token);
+const repo = github.context.repo;
 
 async function run(): Promise<void> {
   try {
-    const token = core.getInput("token");
-    const octokit = github.getOctokit(token);
-    const repo = github.context.repo;
-
     let Tags: Array<Tag> = new Array<Tag>();
 
     octokit.rest.repos.listTags({
       owner: repo.owner,
       repo: repo.repo
     })
-    .then(({ data } ) => {
+    .then(async ({ data } ) => {
 
       if(data.length === 0) {
         throw Error("No tags found in repository");
@@ -36,11 +37,38 @@ async function run(): Promise<void> {
       console.log("New tag is", newTag);
 
 
+      // create the tag octokit.createTag
+
+      const tag = await createTag(newTag);
+      // create the ref octokit.createRef
+
+      await createRef(github.context.ref, github.context.sha)
     });
-  
+
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
+}
+
+async function createRef(ref: string, sha: string) {
+  return await octokit.rest.git.createRef({
+    owner: repo.owner,
+    repo: repo.repo,
+    ref: ref,
+    sha: sha
+  });
+}
+async function createTag(newTag: string) {
+
+  return await octokit.rest.git.createTag({
+    owner: repo.owner,
+    repo: repo.repo,
+    tag: newTag,
+    message: "hi",
+    object: github.context.ref,
+    type: "commit",
+    tagger: { name: "Tag Bog", email:"tagbot@q4inc.com"}
+  });
 }
 
 function GenerateNextTag(lastTag: string) {
