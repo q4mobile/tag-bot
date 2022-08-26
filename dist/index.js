@@ -36,20 +36,18 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github_1 = __importDefault(__nccwpck_require__(5438));
 async function run() {
-    const context = github_1.default.context;
     const token = core.getInput("token");
     const octokit = github_1.default.getOctokit(token);
-    const repo = context.repo;
-    console.log("hello?");
-    console.log(repo.repo);
-    const tags = await octokit.rest.repos.listTags({
-        owner: repo.owner,
-        repo: repo.repo
-    });
-    for (var tag in tags) {
-        console.log(tag);
-        core.info(tag);
-    }
+    // console.log("hello?");
+    // console.log(repo.repo);
+    // const tags = await octokit.rest.repos.listTags({
+    //   owner: repo.owner,
+    //   repo: repo.repo
+    // });
+    // for (var tag in tags) {
+    //   console.log(tag);
+    //   core.info(tag);
+    // }
 }
 run();
 //# sourceMappingURL=index.js.map
