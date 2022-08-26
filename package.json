@@ -17,6 +17,8 @@
     "all": "npm run build && npm run package"
   },
   "dependencies": {
+    "@actions/core": "^1.9.1",
+    "@actions/github": "^5.0.3",
     "@jest/reporters": "^27.5.1",
     "csv-writer": "^1.6.0",
     "lodash": "^4.17.21",
