@@ -42,8 +42,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const tag_1 = __nccwpck_require__(9297);
-const compare_versions_1 = __nccwpck_require__(4773);
 const version_1 = __nccwpck_require__(2792);
+const compare_versions_1 = __nccwpck_require__(4773);
 const token = core.getInput("token");
 const octokit = github.getOctokit(token);
 const repo = github.context.repo;
@@ -65,11 +65,12 @@ function run() {
                 });
                 Tags.sort((a, b) => (0, compare_versions_1.compareVersions)(a.version, b.version));
                 const lastTag = Tags[Tags.length - 1];
-                console.log(lastTag.version);
+                console.log("The last tag in the repository is:", lastTag.version);
                 const newTag = GenerateNextTag(lastTag.version);
-                console.log("New tag is", newTag);
+                console.log("Creating new tag in repository:", newTag);
                 const tag = yield createTag(newTag);
-                yield createRef("refs/tags/" + tag.data.tag, tag.data.sha);
+                const ref = yield createRef("refs/tags/" + tag.data.tag, tag.data.sha);
+                console.log("Created new tag", tag.data.tag);
             }));
         }
         catch (error) {

@@ -1,9 +1,8 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Tag } from "./tag";
-import { compareVersions } from 'compare-versions';
 import { Version } from "./version";
-import { create } from "lodash";
+import { compareVersions } from 'compare-versions';
 
 const token = core.getInput("token");
 const octokit = github.getOctokit(token);
@@ -31,14 +30,14 @@ async function run(): Promise<void> {
       Tags.sort((a,b) => compareVersions(a.version, b.version));
 
       const lastTag = Tags[Tags.length - 1];
-      console.log(lastTag.version);
+      console.log("The last tag in the repository is:", lastTag.version);
       const newTag = GenerateNextTag(lastTag.version);
-      console.log("New tag is", newTag);
 
-
+      console.log("Creating new tag in repository:", newTag)
       const tag = await createTag(newTag);
+      const ref = await createRef("refs/tags/" + tag.data.tag, tag.data.sha)
 
-      await createRef("refs/tags/" + tag.data.tag, tag.data.sha)
+      console.log("Created new tag", tag.data.tag);
     });
 
   } catch (error) {
