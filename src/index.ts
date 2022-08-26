@@ -11,37 +11,35 @@ const repo = github.context.repo;
 async function run(): Promise<void> {
   try {
     console.log(github.context.eventName);
-    if (github.context.eventName == 'merge') {
-      let Tags: Array<Tag> = new Array<Tag>();
+    let Tags: Array<Tag> = new Array<Tag>();
 
-      octokit.rest.repos.listTags({
-        owner: repo.owner,
-        repo: repo.repo
-      })
-        .then(async ({ data }) => {
+    octokit.rest.repos.listTags({
+      owner: repo.owner,
+      repo: repo.repo
+    })
+      .then(async ({ data }) => {
 
-          if (data.length === 0) {
-            throw Error("No tags found in repository");
-          }
+        if (data.length === 0) {
+          throw Error("No tags found in repository");
+        }
 
-          data.forEach(element => {
-            const newTag = new Tag(element.name);
-            Tags.push(newTag);
-          });
-
-          Tags.sort((a, b) => compareVersions(a.version, b.version));
-
-          const lastTag = Tags[Tags.length - 1];
-          console.log("The last tag in the repository is:", lastTag.version);
-          const newTag = GenerateNextTag(lastTag.version);
-
-          console.log("Creating new tag in repository:", newTag)
-          const tag = await createTag(newTag);
-          const ref = await createRef("refs/tags/" + tag.data.tag, tag.data.sha)
-
-          console.log("Created new tag", tag.data.tag);
+        data.forEach(element => {
+          const newTag = new Tag(element.name);
+          Tags.push(newTag);
         });
-    }
+
+        Tags.sort((a, b) => compareVersions(a.version, b.version));
+
+        const lastTag = Tags[Tags.length - 1];
+        console.log("The last tag in the repository is:", lastTag.version);
+        const newTag = GenerateNextTag(lastTag.version);
+
+        console.log("Creating new tag in repository:", newTag)
+        const tag = await createTag(newTag);
+        const ref = await createRef("refs/tags/" + tag.data.tag, tag.data.sha)
+
+        console.log("Created new tag", tag.data.tag);
+      });
 
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)

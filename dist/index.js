@@ -51,30 +51,28 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             console.log(github.context.eventName);
-            if (github.context.eventName == 'merge') {
-                let Tags = new Array();
-                octokit.rest.repos.listTags({
-                    owner: repo.owner,
-                    repo: repo.repo
-                })
-                    .then(({ data }) => __awaiter(this, void 0, void 0, function* () {
-                    if (data.length === 0) {
-                        throw Error("No tags found in repository");
-                    }
-                    data.forEach(element => {
-                        const newTag = new tag_1.Tag(element.name);
-                        Tags.push(newTag);
-                    });
-                    Tags.sort((a, b) => (0, compare_versions_1.compareVersions)(a.version, b.version));
-                    const lastTag = Tags[Tags.length - 1];
-                    console.log("The last tag in the repository is:", lastTag.version);
-                    const newTag = GenerateNextTag(lastTag.version);
-                    console.log("Creating new tag in repository:", newTag);
-                    const tag = yield createTag(newTag);
-                    const ref = yield createRef("refs/tags/" + tag.data.tag, tag.data.sha);
-                    console.log("Created new tag", tag.data.tag);
-                }));
-            }
+            let Tags = new Array();
+            octokit.rest.repos.listTags({
+                owner: repo.owner,
+                repo: repo.repo
+            })
+                .then(({ data }) => __awaiter(this, void 0, void 0, function* () {
+                if (data.length === 0) {
+                    throw Error("No tags found in repository");
+                }
+                data.forEach(element => {
+                    const newTag = new tag_1.Tag(element.name);
+                    Tags.push(newTag);
+                });
+                Tags.sort((a, b) => (0, compare_versions_1.compareVersions)(a.version, b.version));
+                const lastTag = Tags[Tags.length - 1];
+                console.log("The last tag in the repository is:", lastTag.version);
+                const newTag = GenerateNextTag(lastTag.version);
+                console.log("Creating new tag in repository:", newTag);
+                const tag = yield createTag(newTag);
+                const ref = yield createRef("refs/tags/" + tag.data.tag, tag.data.sha);
+                console.log("Created new tag", tag.data.tag);
+            }));
         }
         catch (error) {
             if (error instanceof Error)
