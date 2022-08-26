@@ -39,7 +39,8 @@ async function run() {
         repo: repo.repo
     });
     for (var tag in tags) {
-        core.debug(tag);
+        console.log(tag);
+        core.info(tag);
     }
 }
 //# sourceMappingURL=index.js.map
