@@ -6,8 +6,10 @@ async function run() {
   const context = github.context;
   const token = core.getInput("token");
   const octokit = github.getOctokit(token);
-  console.debug(token);
   const repo = context.repo;
+
+  console.log("hello?");
+  console.log(repo.repo);
 
   const tags = await octokit.rest.repos.listTags({
     owner: repo.owner,

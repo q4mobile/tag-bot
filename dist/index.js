@@ -32,8 +32,9 @@ async function run() {
     const context = github_1.default.context;
     const token = core.getInput("token");
     const octokit = github_1.default.getOctokit(token);
-    console.debug(token);
     const repo = context.repo;
+    console.log("hello?");
+    console.log(repo.repo);
     const tags = await octokit.rest.repos.listTags({
         owner: repo.owner,
         repo: repo.repo
