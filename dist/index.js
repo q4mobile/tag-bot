@@ -98,7 +98,7 @@ function createTag(newTag) {
             message: "Created by Tag Bot",
             object: github.context.sha,
             type: "commit",
-            tagger: { name: "Tag Bog", email: "tagbot@q4inc.com" }
+            tagger: { name: "Tag Bot", email: "tagbot@q4inc.com" }
         });
     });
 }
