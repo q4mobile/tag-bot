@@ -22,7 +22,6 @@ async function run(): Promise<void> {
       if(data.length === 0) {
         throw Error("No tags found in repository");
       }
-
       
       data.forEach(element => {
         const newTag = new Tag(element.name);
@@ -32,17 +31,13 @@ async function run(): Promise<void> {
       Tags.sort((a,b) => compareVersions(a.version, b.version));
 
       const lastTag = Tags[Tags.length - 1];
-      console.log("Last tag is: ", lastTag.name);
       const newTag = GenerateNextTag(lastTag.version);
       console.log("New tag is", newTag);
 
 
-      // create the tag octokit.createTag
-
       const tag = await createTag(newTag);
-      // create the ref octokit.createRef
 
-      await createRef(github.context.ref, github.context.sha)
+      await createRef("refs/tags/" + tag.data.tag, tag.data.sha)
     });
 
   } catch (error) {
@@ -64,7 +59,7 @@ async function createTag(newTag: string) {
     owner: repo.owner,
     repo: repo.repo,
     tag: newTag,
-    message: "hi",
+    message: "Created by Tag Bot",
     object: github.context.sha,
     type: "commit",
     tagger: { name: "Tag Bog", email:"tagbot@q4inc.com"}

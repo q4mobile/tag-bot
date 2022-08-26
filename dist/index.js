@@ -65,13 +65,10 @@ function run() {
                 });
                 Tags.sort((a, b) => (0, compare_versions_1.compareVersions)(a.version, b.version));
                 const lastTag = Tags[Tags.length - 1];
-                console.log("Last tag is: ", lastTag.name);
                 const newTag = GenerateNextTag(lastTag.version);
                 console.log("New tag is", newTag);
-                // create the tag octokit.createTag
                 const tag = yield createTag(newTag);
-                // create the ref octokit.createRef
-                yield createRef(github.context.ref, github.context.sha);
+                yield createRef("refs/tags/" + tag.data.tag, tag.data.sha);
             }));
         }
         catch (error) {
@@ -96,7 +93,7 @@ function createTag(newTag) {
             owner: repo.owner,
             repo: repo.repo,
             tag: newTag,
-            message: "hi",
+            message: "Created by Tag Bot",
             object: github.context.sha,
             type: "commit",
             tagger: { name: "Tag Bog", email: "tagbot@q4inc.com" }
