@@ -41,12 +41,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
+const tag_1 = __nccwpck_require__(9297);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const token = core.getInput("token");
             const octokit = github.getOctokit(token);
             const repo = github.context.repo;
+            let Tags = new Array();
             octokit.rest.repos.listTags({
                 owner: repo.owner,
                 repo: repo.repo
@@ -56,8 +58,11 @@ function run() {
                     throw Error("No tags found in repository");
                 }
                 console.log(data);
-                for (const tag in data) {
-                    console.log(tag);
+                const tags = JSON.parse(data.toString());
+                for (const tag in tags) {
+                    const newTag = new tag_1.Tag(tags.name);
+                    Tags.push(newTag);
+                    console.log(newTag);
                 }
             });
         }
@@ -68,6 +73,23 @@ function run() {
     });
 }
 run();
+
+
+/***/ }),
+
+/***/ 9297:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Tag = void 0;
+class Tag {
+    constructor(tagName) {
+        this.name = tagName;
+    }
+}
+exports.Tag = Tag;
 
 
 /***/ }),
