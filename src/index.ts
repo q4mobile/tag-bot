@@ -21,15 +21,17 @@ async function run(): Promise<void> {
       }
 
       
-      console.log(data);
-      const tags = JSON.parse(data.toString());
+      let tags: any = data;
 
-      for (const tag in tags) {
-
-        const newTag = new Tag(tags.name);
+      data.forEach(element => {
+        const newTag = new Tag(element.name);
         Tags.push(newTag);
-        console.log(newTag);
-      }
+      });
+
+      Tags.forEach( tag => {
+        console.log(tag.name);
+      });
+
     });
   
   } catch (error) {

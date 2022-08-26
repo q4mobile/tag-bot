@@ -57,13 +57,14 @@ function run() {
                 if (data.length === 0) {
                     throw Error("No tags found in repository");
                 }
-                console.log(data);
-                const tags = JSON.parse(data.toString());
-                for (const tag in tags) {
-                    const newTag = new tag_1.Tag(tags.name);
+                let tags = data;
+                data.forEach(element => {
+                    const newTag = new tag_1.Tag(element.name);
                     Tags.push(newTag);
-                    console.log(newTag);
-                }
+                });
+                Tags.forEach(tag => {
+                    console.log(tag.name);
+                });
             });
         }
         catch (error) {
