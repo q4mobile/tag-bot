@@ -50,9 +50,9 @@ function GenerateNextTag(lastTag: string) {
 
   let newTag = "{0}.{1}.{2}";
 
-  newTag.replace("{0}", previousTag[0]);
-  newTag.replace("{1}", previousTag[1] + 1);
-  newTag.replace("{2}", previousTag[2]);
+  newTag.replace('{0}', previousTag[0]);
+  newTag.replace('{1}', previousTag[1] + 1);
+  newTag.replace('{2}', previousTag[2]);
   newTag = "v" + newTag
 
   return newTag
