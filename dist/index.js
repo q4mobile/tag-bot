@@ -54,9 +54,9 @@ function run() {
                 repo: repo.repo
             })
                 .then(({ data }) => {
+                console.log(data);
                 for (const tag in data) {
                     console.log(tag);
-                    core.info(tag);
                 }
             });
         }
