@@ -22,18 +22,14 @@ async function run(): Promise<void> {
       }
 
       
-      let tags: any = data;
-
       data.forEach(element => {
         const newTag = new Tag(element.name);
         Tags.push(newTag);
       });
 
-      console.log(Tags);
-
       Tags.sort((a,b) => compareVersions(a.version, b.version));
 
-      const lastTag = Tags[0];
+      const lastTag = Tags[Tags.length - 1];
       console.log("Last tag is: ", lastTag);
 
 

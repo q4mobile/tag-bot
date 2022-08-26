@@ -58,14 +58,12 @@ function run() {
                 if (data.length === 0) {
                     throw Error("No tags found in repository");
                 }
-                let tags = data;
                 data.forEach(element => {
                     const newTag = new tag_1.Tag(element.name);
                     Tags.push(newTag);
                 });
-                console.log(Tags);
                 Tags.sort((a, b) => (0, compare_versions_1.compareVersions)(a.version, b.version));
-                const lastTag = Tags[0];
+                const lastTag = Tags[Tags.length - 1];
                 console.log("Last tag is: ", lastTag);
             });
         }
