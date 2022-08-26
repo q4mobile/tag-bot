@@ -49,14 +49,16 @@ function run() {
             const repo = github.context.repo;
             console.log(repo.owner);
             console.log(repo.repo);
-            const tags = yield octokit.rest.repos.listTags({
+            octokit.rest.repos.listTags({
                 owner: repo.owner,
                 repo: repo.repo
+            })
+                .then(({ data }) => {
+                for (const tag in data) {
+                    console.log(tag);
+                    core.info(tag);
+                }
             });
-            for (const tag in tags) {
-                console.log(tag);
-                core.info(tag);
-            }
         }
         catch (error) {
             if (error instanceof Error)
