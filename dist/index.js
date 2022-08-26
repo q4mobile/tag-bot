@@ -50,7 +50,8 @@ const repo = github.context.repo;
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            if (github.context.eventName == 'merged') {
+            console.log(github.context.eventName);
+            if (github.context.eventName == 'merge') {
                 let Tags = new Array();
                 octokit.rest.repos.listTags({
                     owner: repo.owner,

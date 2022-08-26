@@ -10,7 +10,8 @@ const repo = github.context.repo;
 
 async function run(): Promise<void> {
   try {
-    if (github.context.eventName == 'merged') {
+    console.log(github.context.eventName);
+    if (github.context.eventName == 'merge') {
       let Tags: Array<Tag> = new Array<Tag>();
 
       octokit.rest.repos.listTags({
