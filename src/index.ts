@@ -46,6 +46,8 @@ function GenerateNextTag(lastTag: string) {
 
   let previousTag: Array<string> = lastTag.split('.');
 
+  console.log(previousTag[0]);
+
   let newTag = "{0}.{1}.{2}";
 
   newTag.replace("{0}", previousTag[0]);
@@ -55,4 +57,5 @@ function GenerateNextTag(lastTag: string) {
 
   return newTag
 }
+
 run()
