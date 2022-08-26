@@ -33,6 +33,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
 async function run() {
     const token = core.getInput("token");
+    console.log(token);
     //const octokit = github.getOctokit(token);
     // console.log("hello?");
     // console.log(repo.repo);
