@@ -74,7 +74,7 @@ function GenerateNextTag(lastTag: string) {
 
   console.log(previousTag[0]);
 
-  const newTag = new Version(previousTag[0], previousTag[1] + 1, previousTag[1]);
+  const newTag = new Version(previousTag[0], previousTag[1] + 1, previousTag[2]);
 
   return newTag.toString();
 }
