@@ -1,10 +1,10 @@
 export class Version {
 
-  major: string;
-  minor: string;
-  patch: string;
+  major: number;
+  minor: number;
+  patch: number;
   
-  constructor(newMajor: string, newMinor: string, newPatch: string) {
+  constructor(newMajor: number, newMinor: number, newPatch: number) {
     this.major = newMajor;
     this.minor = newMinor;
     this.patch = newPatch;

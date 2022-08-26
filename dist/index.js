@@ -77,7 +77,9 @@ function run() {
     });
 }
 function GenerateNextTag(lastTag) {
-    let previousTag = lastTag.split('.');
+    let previousTag = lastTag.split('.').map(function (item) {
+        return parseInt(item);
+    });
     console.log(previousTag[0]);
     const newTag = new version_1.Version(previousTag[0], previousTag[1] + 1, previousTag[1]);
     return newTag.toString();

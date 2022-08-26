@@ -45,7 +45,9 @@ async function run(): Promise<void> {
 
 function GenerateNextTag(lastTag: string) {
 
-  let previousTag: Array<string> = lastTag.split('.');
+  let previousTag: Array<number> = lastTag.split('.').map(function(item) {
+    return parseInt(item);
+  });
 
   console.log(previousTag[0]);
 
