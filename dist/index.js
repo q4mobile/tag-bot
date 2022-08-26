@@ -43,6 +43,7 @@ const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const tag_1 = __nccwpck_require__(9297);
 const compare_versions_1 = __nccwpck_require__(4773);
+const version_1 = __nccwpck_require__(2792);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -78,12 +79,8 @@ function run() {
 function GenerateNextTag(lastTag) {
     let previousTag = lastTag.split('.');
     console.log(previousTag[0]);
-    let newTag = "{0}.{1}.{2}";
-    newTag.replace('{0}', previousTag[0]);
-    newTag.replace('{1}', previousTag[1] + 1);
-    newTag.replace('{2}', previousTag[2]);
-    newTag = "v" + newTag;
-    return newTag;
+    const newTag = new version_1.Version(previousTag[0], previousTag[1] + 1, previousTag[1]);
+    return newTag.toString();
 }
 run();
 
@@ -104,6 +101,28 @@ class Tag {
     }
 }
 exports.Tag = Tag;
+
+
+/***/ }),
+
+/***/ 2792:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Version = void 0;
+class Version {
+    constructor(newMajor, newMinor, newPatch) {
+        this.major = newMajor;
+        this.minor = newMinor;
+        this.patch = newPatch;
+    }
+    toString() {
+        return "v" + this.major + "." + this.minor + "." + this.patch;
+    }
+}
+exports.Version = Version;
 
 
 /***/ }),

@@ -2,6 +2,7 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Tag } from "./tag";
 import { compareVersions } from 'compare-versions';
+import { Version } from "./version";
 
 async function run(): Promise<void> {
   try {
@@ -48,14 +49,9 @@ function GenerateNextTag(lastTag: string) {
 
   console.log(previousTag[0]);
 
-  let newTag = "{0}.{1}.{2}";
+  const newTag = new Version(previousTag[0], previousTag[1] + 1, previousTag[1]);
 
-  newTag.replace('{0}', previousTag[0]);
-  newTag.replace('{1}', previousTag[1] + 1);
-  newTag.replace('{2}', previousTag[2]);
-  newTag = "v" + newTag
-
-  return newTag
+  return newTag.toString();
 }
 
 run()
