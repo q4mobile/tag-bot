@@ -31,6 +31,7 @@ async function run(): Promise<void> {
       Tags.sort((a,b) => compareVersions(a.version, b.version));
 
       const lastTag = Tags[Tags.length - 1];
+      console.log(lastTag.version);
       const newTag = GenerateNextTag(lastTag.version);
       console.log("New tag is", newTag);
 
@@ -71,8 +72,6 @@ function GenerateNextTag(lastTag: string) {
   let previousTag: Array<number> = lastTag.split('.').map(function(item) {
     return parseInt(item);
   });
-
-  console.log(previousTag[0]);
 
   const newTag = new Version(previousTag[0], previousTag[1] + 1, previousTag[2]);
 

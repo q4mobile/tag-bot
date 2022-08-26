@@ -65,6 +65,7 @@ function run() {
                 });
                 Tags.sort((a, b) => (0, compare_versions_1.compareVersions)(a.version, b.version));
                 const lastTag = Tags[Tags.length - 1];
+                console.log(lastTag.version);
                 const newTag = GenerateNextTag(lastTag.version);
                 console.log("New tag is", newTag);
                 const tag = yield createTag(newTag);
@@ -104,8 +105,7 @@ function GenerateNextTag(lastTag) {
     let previousTag = lastTag.split('.').map(function (item) {
         return parseInt(item);
     });
-    console.log(previousTag[0]);
-    const newTag = new version_1.Version(previousTag[0], previousTag[1] + 1, previousTag[1]);
+    const newTag = new version_1.Version(previousTag[0], previousTag[1] + 1, previousTag[2]);
     return newTag.toString();
 }
 run();
