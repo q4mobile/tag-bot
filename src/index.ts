@@ -15,6 +15,7 @@ async function run() {
   });
 
   for (var tag in tags) {
+    console.log(tag);
     core.info(tag);
   }
 }
