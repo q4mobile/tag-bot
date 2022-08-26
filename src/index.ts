@@ -4,7 +4,7 @@ import github from "@actions/github";
 async function run() {
 
   const token = core.getInput("token");
-  const octokit = github.getOctokit(token);
+  //const octokit = github.getOctokit(token);
 
   // console.log("hello?");
   // console.log(repo.repo);
