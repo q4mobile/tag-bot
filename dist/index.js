@@ -44,4 +44,5 @@ async function run() {
         core.info(tag);
     }
 }
+run();
 //# sourceMappingURL=index.js.map

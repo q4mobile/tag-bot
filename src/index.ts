@@ -21,3 +21,5 @@ async function run() {
     core.info(tag);
   }
 }
+
+run();
