@@ -8,6 +8,8 @@ const token = core.getInput("token");
 const octokit = github.getOctokit(token);
 const repo = github.context.repo;
 
+
+
 async function run(): Promise<void> {
   try {
     let Tags: Array<Tag> = new Array<Tag>();
@@ -31,7 +33,7 @@ async function run(): Promise<void> {
 
         const lastTag = Tags[Tags.length - 1];
         console.log("The last tag in the repository is:", lastTag.version);
-        const newTag = GenerateNextTag(lastTag.version);
+        const newTag = generateNextTag(lastTag.version, "minor");
 
         console.log("Creating new tag in repository:", newTag)
         const tag = await createTag(newTag);
@@ -53,6 +55,7 @@ async function createRef(ref: string, sha: string) {
     sha: sha
   });
 }
+
 async function createTag(newTag: string) {
 
   return await octokit.rest.git.createTag({
@@ -66,13 +69,27 @@ async function createTag(newTag: string) {
   });
 }
 
-function GenerateNextTag(lastTag: string) {
-
+export function generateNextTag(lastTag: string, partToIncrememt: string) {
   let previousTag: Array<number> = lastTag.split('.').map(function (item) {
     return parseInt(item);
   });
 
-  const newTag = new Version(previousTag[0], previousTag[1] + 1, previousTag[2]);
+  let newTag = new Version(previousTag[0], previousTag[1], previousTag[2]);
+  switch (partToIncrememt)
+  {
+    case "major": {
+      newTag.major++;
+      break;
+    }
+    case "minor": {
+      newTag.minor++;
+      break;
+    }
+    case "patch": {
+      newTag.patch++;
+      break;
+    }
+  }
 
   return newTag.toString();
 }
