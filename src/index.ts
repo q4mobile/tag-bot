@@ -2,8 +2,9 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Tag } from "./tag";
 import { compareVersions } from 'compare-versions';
-import { generateNextTag, PartToIncrement } from "./utils";
-import { cpuUsage } from "process";
+import { generateNextTag, parseCommentBody, PartToIncrement } from "./utils";
+import config from "./config";
+
 
 const token = core.getInput("token");
 const octokit = github.getOctokit(token);
@@ -12,26 +13,23 @@ const repo = github.context.repo;
 async function run(): Promise<void> {
   try {
 
-    console.log("PR Number: ", github.context.payload.pull_request!.number)
-
-    let partToIncrement = PartToIncrement.Minor; // default
+    console.log("Checking comments to see if there are comments indicating if we should incrememnt something other than the minor portion of the previous version: ")
+    let partToIncrement: PartToIncrement | unknown = PartToIncrement.Minor; // default
     // check for comments (but you have to use issues!)
     await octokit.rest.issues.listComments({
       owner: repo.owner,
       repo: repo.repo,
       issue_number: github.context.payload.pull_request!.number
-    }).then ( async ({ data }) => {
-  
-      const identifier = "/tag-bot"
+    }).then(async ({ data }) => {
+
       data.forEach(comment => {
-        console.log(comment.body);
-        if(comment.body!.startsWith(identifier)) {
-          console.log("partToIncrememnt: ", comment.body!.substring(identifier.length));
+        if (comment.body!.startsWith(config.commentIdentifier)) {
+          partToIncrement = parseCommentBody(comment.body!);
         }
       })
     });
-    
 
+    console.log("Figuring out what the last tag was and creating the new tag based off that: ")
     let Tags: Array<Tag> = new Array<Tag>();
 
     octokit.rest.repos.listTags({
@@ -53,7 +51,7 @@ async function run(): Promise<void> {
 
         const lastTag = Tags[Tags.length - 1];
         console.log("The last tag in the repository is:", lastTag.version);
-        const newTag = generateNextTag(lastTag.version, PartToIncrement.Minor);
+        const newTag = generateNextTag(lastTag.version, partToIncrement);
 
         console.log("Creating new tag in repository:", newTag)
         const tag = await createTag(newTag);
@@ -65,10 +63,6 @@ async function run(): Promise<void> {
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
-}
-
-async function checkCommentsForCommand() {
-  return 
 }
 
 async function createRef(ref: string, sha: string) {

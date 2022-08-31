@@ -1,4 +1,4 @@
-import { generateNextTag, PartToIncrement } from "../utils"
+import { generateNextTag, parseCommentBody, PartToIncrement } from "../utils"
 
 test("1: [Given] I want a tag created with the minor version incrememented [Then] generateNextTag returns the next tag with only the minor part of the version incremented.", () => {
   const lastTag = "1.0.0"
@@ -20,6 +20,30 @@ test("3: [Given] I want a tag created with the patch version incrememented [Then
   const lastTag = "1.0.0"
   const expected = "v1.0.1"
   const actual = generateNextTag(lastTag, PartToIncrement.Patch);
+
+  expect(actual).toEqual(expected);
+});
+
+test("4: [Given] I want to increment by major [And] the pull request contains a comment with major [Then] parseCommentBody should return PartToIncrement.Major .", () => {
+
+  const expected = PartToIncrement.Major;
+  const actual = parseCommentBody("/tag-bot major");
+
+  expect(actual).toEqual(expected);
+});
+
+test("5: [Given] I want to increment by minor [And] the pull request contains a comment with minor [Then] parseCommentBody should return PartToIncrement.Minor.", () => {
+
+  const expected = PartToIncrement.Minor;
+  const actual = parseCommentBody("/tag-bot minor");
+
+  expect(actual).toEqual(expected);
+});
+
+test("6: [Given] I want to increment by patch [And] the pull request contains a comment with patch [Then] parseCommentBody should return PartToIncrement.Patch.", () => {
+
+  const expected = PartToIncrement.Patch;
+  const actual = parseCommentBody("/tag-bot patch");
 
   expect(actual).toEqual(expected);
 });

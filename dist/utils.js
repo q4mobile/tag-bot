@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateNextTag = exports.PartToIncrement = void 0;
+exports.parseCommentBody = exports.generateNextTag = exports.PartToIncrement = void 0;
+const config_1 = __importDefault(require("./config"));
 const version_1 = require("./version");
 var PartToIncrement;
 (function (PartToIncrement) {
@@ -30,3 +34,12 @@ function generateNextTag(lastTag, partToIncrememt) {
     return newTag.toString();
 }
 exports.generateNextTag = generateNextTag;
+function parseCommentBody(body) {
+    if (body.startsWith(config_1.default.commentIdentifier)) {
+        let extractedPart = body.substring(config_1.default.commentIdentifier.length + 1);
+        extractedPart = extractedPart.charAt(0).toUpperCase() + extractedPart.slice(1);
+        let partToIncrement = PartToIncrement[extractedPart];
+        return partToIncrement;
+    }
+}
+exports.parseCommentBody = parseCommentBody;

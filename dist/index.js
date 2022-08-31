@@ -1,6 +1,21 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 1677:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const commentIdentifier = "/tag-bot";
+const config = {
+    commentIdentifier: commentIdentifier
+};
+exports.default = config;
+
+
+/***/ }),
+
 /***/ 9283:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -38,30 +53,37 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const tag_1 = __nccwpck_require__(9297);
 const compare_versions_1 = __nccwpck_require__(4773);
 const utils_1 = __nccwpck_require__(4729);
+const config_1 = __importDefault(__nccwpck_require__(1677));
 const token = core.getInput("token");
 const octokit = github.getOctokit(token);
 const repo = github.context.repo;
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            console.log("PR Number: ", github.context.payload.pull_request.number);
+            console.log("Checking comments to see if there are comments indicating if we should incrememnt something other than the minor portion of the previous version: ");
+            let partToIncrement = utils_1.PartToIncrement.Minor; // default
             // check for comments (but you have to use issues!)
-            octokit.rest.issues.listComments({
+            yield octokit.rest.issues.listComments({
                 owner: repo.owner,
                 repo: repo.repo,
                 issue_number: github.context.payload.pull_request.number
             }).then(({ data }) => __awaiter(this, void 0, void 0, function* () {
-                console.log(data);
                 data.forEach(comment => {
-                    console.log(comment.body);
+                    if (comment.body.startsWith(config_1.default.commentIdentifier)) {
+                        partToIncrement = (0, utils_1.parseCommentBody)(comment.body);
+                    }
                 });
             }));
+            console.log("Figuring out what the last tag was and creating the new tag based off that: ");
             let Tags = new Array();
             octokit.rest.repos.listTags({
                 owner: repo.owner,
@@ -78,7 +100,7 @@ function run() {
                 Tags.sort((a, b) => (0, compare_versions_1.compareVersions)(a.version, b.version));
                 const lastTag = Tags[Tags.length - 1];
                 console.log("The last tag in the repository is:", lastTag.version);
-                const newTag = (0, utils_1.generateNextTag)(lastTag.version, utils_1.PartToIncrement.Minor);
+                const newTag = (0, utils_1.generateNextTag)(lastTag.version, partToIncrement);
                 console.log("Creating new tag in repository:", newTag);
                 const tag = yield createTag(newTag);
                 const ref = yield createRef("refs/tags/" + tag.data.tag, tag.data.sha);
@@ -89,11 +111,6 @@ function run() {
             if (error instanceof Error)
                 core.setFailed(error.message);
         }
-    });
-}
-function checkCommentsForCommand() {
-    return __awaiter(this, void 0, void 0, function* () {
-        return;
     });
 }
 function createRef(ref, sha) {
@@ -143,12 +160,16 @@ exports.Tag = Tag;
 /***/ }),
 
 /***/ 4729:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.generateNextTag = exports.PartToIncrement = void 0;
+exports.parseCommentBody = exports.generateNextTag = exports.PartToIncrement = void 0;
+const config_1 = __importDefault(__nccwpck_require__(1677));
 const version_1 = __nccwpck_require__(2792);
 var PartToIncrement;
 (function (PartToIncrement) {
@@ -178,6 +199,15 @@ function generateNextTag(lastTag, partToIncrememt) {
     return newTag.toString();
 }
 exports.generateNextTag = generateNextTag;
+function parseCommentBody(body) {
+    if (body.startsWith(config_1.default.commentIdentifier)) {
+        let extractedPart = body.substring(config_1.default.commentIdentifier.length + 1);
+        extractedPart = extractedPart.charAt(0).toUpperCase() + extractedPart.slice(1);
+        let partToIncrement = PartToIncrement[extractedPart];
+        return partToIncrement;
+    }
+}
+exports.parseCommentBody = parseCommentBody;
 
 
 /***/ }),
