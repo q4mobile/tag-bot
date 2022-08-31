@@ -13,7 +13,7 @@ async function run(): Promise<void> {
 
     console.log("PR Number: ", github.context.payload.pull_request!.number)
 
-    checkCommentsForCommand();
+    await checkCommentsForCommand();
 
     let Tags: Array<Tag> = new Array<Tag>();
 

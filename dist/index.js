@@ -51,7 +51,7 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             console.log("PR Number: ", github.context.payload.pull_request.number);
-            checkCommentsForCommand();
+            yield checkCommentsForCommand();
             let Tags = new Array();
             octokit.rest.repos.listTags({
                 owner: repo.owner,
