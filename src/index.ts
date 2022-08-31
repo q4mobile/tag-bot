@@ -1,17 +1,18 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Tag } from "./tag";
-import { Version } from "./version";
 import { compareVersions } from 'compare-versions';
+import { generateNextTag } from "./utils";
 
 const token = core.getInput("token");
 const octokit = github.getOctokit(token);
 const repo = github.context.repo;
 
-
-
 async function run(): Promise<void> {
   try {
+
+
+
     let Tags: Array<Tag> = new Array<Tag>();
 
     octokit.rest.repos.listTags({
@@ -47,6 +48,18 @@ async function run(): Promise<void> {
   }
 }
 
+async function checkCommentsForCommand() {
+  return octokit.rest.pulls.listReviewComments({
+    owner: repo.owner,
+    repo: repo.repo,
+    pull_number: github.context.payload.pull_request!.number
+  }).then ( async ({ data }) => {
+    data.forEach(comment => {
+      console.log(comment);
+    })
+  });
+}
+
 async function createRef(ref: string, sha: string) {
   return await octokit.rest.git.createRef({
     owner: repo.owner,
@@ -57,7 +70,6 @@ async function createRef(ref: string, sha: string) {
 }
 
 async function createTag(newTag: string) {
-
   return await octokit.rest.git.createTag({
     owner: repo.owner,
     repo: repo.repo,
@@ -67,31 +79,6 @@ async function createTag(newTag: string) {
     type: "commit",
     tagger: { name: "Tag Bot", email: "tagbot@q4inc.com" }
   });
-}
-
-export function generateNextTag(lastTag: string, partToIncrememt: string) {
-  let previousTag: Array<number> = lastTag.split('.').map(function (item) {
-    return parseInt(item);
-  });
-
-  let newTag = new Version(previousTag[0], previousTag[1], previousTag[2]);
-  switch (partToIncrememt)
-  {
-    case "major": {
-      newTag.major++;
-      break;
-    }
-    case "minor": {
-      newTag.minor++;
-      break;
-    }
-    case "patch": {
-      newTag.patch++;
-      break;
-    }
-  }
-
-  return newTag.toString();
 }
 
 run()
