@@ -51,11 +51,11 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             console.log("PR Number: ", github.context.payload.pull_request.number);
-            // check for comments
-            octokit.rest.pulls.listReviewComments({
+            // check for comments (but you have to use issues!)
+            octokit.rest.issues.listComments({
                 owner: repo.owner,
                 repo: repo.repo,
-                pull_number: github.context.payload.pull_request.number
+                issue_number: github.context.payload.pull_request.number
             }).then(({ data }) => __awaiter(this, void 0, void 0, function* () {
                 console.log(data);
                 data.forEach(comment => {

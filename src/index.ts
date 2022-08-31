@@ -13,11 +13,11 @@ async function run(): Promise<void> {
 
     console.log("PR Number: ", github.context.payload.pull_request!.number)
 
-    // check for comments
-    octokit.rest.pulls.listReviewComments({
+    // check for comments (but you have to use issues!)
+    octokit.rest.issues.listComments({
       owner: repo.owner,
       repo: repo.repo,
-      pull_number: github.context.payload.pull_request!.number
+      issue_number: github.context.payload.pull_request!.number
     }).then ( async ({ data }) => {
   
       console.log(data);
