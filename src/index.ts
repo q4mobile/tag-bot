@@ -2,7 +2,7 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Tag } from "./tag";
 import { compareVersions } from 'compare-versions';
-import { generateNextTag } from "./utils";
+import { generateNextTag, PartToIncrement } from "./utils";
 
 const token = core.getInput("token");
 const octokit = github.getOctokit(token);
@@ -36,7 +36,7 @@ async function run(): Promise<void> {
 
         const lastTag = Tags[Tags.length - 1];
         console.log("The last tag in the repository is:", lastTag.version);
-        const newTag = generateNextTag(lastTag.version, "minor");
+        const newTag = generateNextTag(lastTag.version, PartToIncrement.Minor);
 
         console.log("Creating new tag in repository:", newTag)
         const tag = await createTag(newTag);

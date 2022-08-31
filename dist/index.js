@@ -42,14 +42,16 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const tag_1 = __nccwpck_require__(9297);
-const version_1 = __nccwpck_require__(2792);
 const compare_versions_1 = __nccwpck_require__(4773);
+const utils_1 = __nccwpck_require__(4729);
 const token = core.getInput("token");
 const octokit = github.getOctokit(token);
 const repo = github.context.repo;
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            console.log("PR Number: ", github.context.payload.pull_request.number);
+            checkCommentsForCommand();
             let Tags = new Array();
             octokit.rest.repos.listTags({
                 owner: repo.owner,
@@ -66,7 +68,7 @@ function run() {
                 Tags.sort((a, b) => (0, compare_versions_1.compareVersions)(a.version, b.version));
                 const lastTag = Tags[Tags.length - 1];
                 console.log("The last tag in the repository is:", lastTag.version);
-                const newTag = GenerateNextTag(lastTag.version);
+                const newTag = (0, utils_1.generateNextTag)(lastTag.version, utils_1.PartToIncrement.Minor);
                 console.log("Creating new tag in repository:", newTag);
                 const tag = yield createTag(newTag);
                 const ref = yield createRef("refs/tags/" + tag.data.tag, tag.data.sha);
@@ -77,6 +79,19 @@ function run() {
             if (error instanceof Error)
                 core.setFailed(error.message);
         }
+    });
+}
+function checkCommentsForCommand() {
+    return __awaiter(this, void 0, void 0, function* () {
+        return octokit.rest.pulls.listReviewComments({
+            owner: repo.owner,
+            repo: repo.repo,
+            pull_number: github.context.payload.pull_request.number
+        }).then(({ data }) => __awaiter(this, void 0, void 0, function* () {
+            data.forEach(comment => {
+                console.log(comment);
+            });
+        }));
     });
 }
 function createRef(ref, sha) {
@@ -102,13 +117,6 @@ function createTag(newTag) {
         });
     });
 }
-function GenerateNextTag(lastTag) {
-    let previousTag = lastTag.split('.').map(function (item) {
-        return parseInt(item);
-    });
-    const newTag = new version_1.Version(previousTag[0], previousTag[1] + 1, previousTag[2]);
-    return newTag.toString();
-}
 run();
 
 
@@ -128,6 +136,46 @@ class Tag {
     }
 }
 exports.Tag = Tag;
+
+
+/***/ }),
+
+/***/ 4729:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.generateNextTag = exports.PartToIncrement = void 0;
+const version_1 = __nccwpck_require__(2792);
+var PartToIncrement;
+(function (PartToIncrement) {
+    PartToIncrement[PartToIncrement["Major"] = 0] = "Major";
+    PartToIncrement[PartToIncrement["Minor"] = 1] = "Minor";
+    PartToIncrement[PartToIncrement["Patch"] = 2] = "Patch";
+})(PartToIncrement = exports.PartToIncrement || (exports.PartToIncrement = {}));
+function generateNextTag(lastTag, partToIncrememt) {
+    let previousTag = lastTag.split('.').map(function (item) {
+        return parseInt(item);
+    });
+    let newTag = new version_1.Version(previousTag[0], previousTag[1], previousTag[2]);
+    switch (partToIncrememt) {
+        case PartToIncrement.Major: {
+            newTag.major++;
+            break;
+        }
+        case PartToIncrement.Minor: {
+            newTag.minor++;
+            break;
+        }
+        case PartToIncrement.Patch: {
+            newTag.patch++;
+            break;
+        }
+    }
+    return newTag.toString();
+}
+exports.generateNextTag = generateNextTag;
 
 
 /***/ }),
