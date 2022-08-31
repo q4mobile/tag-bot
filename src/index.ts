@@ -11,7 +11,9 @@ const repo = github.context.repo;
 async function run(): Promise<void> {
   try {
 
+    console.log("PR Number: ", github.context.payload.pull_request!.number)
 
+    checkCommentsForCommand();
 
     let Tags: Array<Tag> = new Array<Tag>();
 
