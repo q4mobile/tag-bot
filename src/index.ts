@@ -3,6 +3,7 @@ import * as github from "@actions/github";
 import { Tag } from "./tag";
 import { compareVersions } from 'compare-versions';
 import { generateNextTag, PartToIncrement } from "./utils";
+import { cpuUsage } from "process";
 
 const token = core.getInput("token");
 const octokit = github.getOctokit(token);
@@ -13,17 +14,20 @@ async function run(): Promise<void> {
 
     console.log("PR Number: ", github.context.payload.pull_request!.number)
 
+    let partToIncrement = PartToIncrement.Minor; // default
     // check for comments (but you have to use issues!)
-    octokit.rest.issues.listComments({
+    await octokit.rest.issues.listComments({
       owner: repo.owner,
       repo: repo.repo,
       issue_number: github.context.payload.pull_request!.number
     }).then ( async ({ data }) => {
   
-      console.log(data);
-  
+      const identifier = "/tag-bot"
       data.forEach(comment => {
         console.log(comment.body);
+        if(comment.body!.startsWith(identifier)) {
+          console.log("partToIncrememnt: ", comment.body!.substring(identifier.length));
+        }
       })
     });
     
