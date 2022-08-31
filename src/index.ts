@@ -57,7 +57,7 @@ async function checkCommentsForCommand() {
     pull_number: github.context.payload.pull_request!.number
   }).then ( async ({ data }) => {
     data.forEach(comment => {
-      console.log(comment);
+      console.log(comment.body);
     })
   });
 }

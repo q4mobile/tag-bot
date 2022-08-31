@@ -89,7 +89,7 @@ function checkCommentsForCommand() {
             pull_number: github.context.payload.pull_request.number
         }).then(({ data }) => __awaiter(this, void 0, void 0, function* () {
             data.forEach(comment => {
-                console.log(comment);
+                console.log(comment.body);
             });
         }));
     });
