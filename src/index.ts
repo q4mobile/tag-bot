@@ -13,7 +13,20 @@ async function run(): Promise<void> {
 
     console.log("PR Number: ", github.context.payload.pull_request!.number)
 
-    await checkCommentsForCommand();
+    // check for comments
+    octokit.rest.pulls.listReviewComments({
+      owner: repo.owner,
+      repo: repo.repo,
+      pull_number: github.context.payload.pull_request!.number
+    }).then ( async ({ data }) => {
+  
+      console.log(data);
+  
+      data.forEach(comment => {
+        console.log(comment.body);
+      })
+    });
+    
 
     let Tags: Array<Tag> = new Array<Tag>();
 
@@ -51,15 +64,7 @@ async function run(): Promise<void> {
 }
 
 async function checkCommentsForCommand() {
-  return octokit.rest.pulls.listReviewComments({
-    owner: repo.owner,
-    repo: repo.repo,
-    pull_number: github.context.payload.pull_request!.number
-  }).then ( async ({ data }) => {
-    data.forEach(comment => {
-      console.log(comment.body);
-    })
-  });
+  return 
 }
 
 async function createRef(ref: string, sha: string) {

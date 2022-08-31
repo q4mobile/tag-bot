@@ -51,7 +51,17 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             console.log("PR Number: ", github.context.payload.pull_request.number);
-            yield checkCommentsForCommand();
+            // check for comments
+            octokit.rest.pulls.listReviewComments({
+                owner: repo.owner,
+                repo: repo.repo,
+                pull_number: github.context.payload.pull_request.number
+            }).then(({ data }) => __awaiter(this, void 0, void 0, function* () {
+                console.log(data);
+                data.forEach(comment => {
+                    console.log(comment.body);
+                });
+            }));
             let Tags = new Array();
             octokit.rest.repos.listTags({
                 owner: repo.owner,
@@ -83,15 +93,7 @@ function run() {
 }
 function checkCommentsForCommand() {
     return __awaiter(this, void 0, void 0, function* () {
-        return octokit.rest.pulls.listReviewComments({
-            owner: repo.owner,
-            repo: repo.repo,
-            pull_number: github.context.payload.pull_request.number
-        }).then(({ data }) => __awaiter(this, void 0, void 0, function* () {
-            data.forEach(comment => {
-                console.log(comment.body);
-            });
-        }));
+        return;
     });
 }
 function createRef(ref, sha) {
