@@ -68,9 +68,7 @@ const repo = github.context.repo;
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            console.log("Checking comments to see if there are comments indicating if we should incrememnt something other than the minor portion of the previous version: ");
             let partToIncrement = utils_1.PartToIncrement.Minor; // default
-            // check for comments (but you have to use issues!)
             yield octokit.rest.issues.listComments({
                 owner: repo.owner,
                 repo: repo.repo,
@@ -82,8 +80,7 @@ function run() {
                     }
                 });
             }));
-            console.log("Figuring out what the last tag was and creating the new tag based off that: ");
-            octokit.rest.repos.listTags({
+            yield octokit.rest.repos.listTags({
                 owner: repo.owner,
                 repo: repo.repo
             })
@@ -92,7 +89,7 @@ function run() {
                 if (data.length > 0) {
                     lastTag = (0, utils_1.determineLastTag)(data);
                 }
-                console.log("The last tag in the repository is:", lastTag.version);
+                console.log("The last tag in the repository is:", lastTag.toString());
                 const newTag = (0, utils_1.generateNextTag)(lastTag.version, partToIncrement);
                 console.log("Creating new tag in repository:", newTag.toString());
                 const tag = yield createTag(newTag.toString());
@@ -145,6 +142,9 @@ class Tag {
     constructor(tagName) {
         this.name = tagName;
         this.version = this.name.substring(1);
+    }
+    toString() {
+        return "v" + this.version;
     }
 }
 exports.Tag = Tag;

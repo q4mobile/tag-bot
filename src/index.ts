@@ -11,9 +11,8 @@ const repo = github.context.repo;
 async function run(): Promise<void> {
   try {
 
-    console.log("Checking comments to see if there are comments indicating if we should incrememnt something other than the minor portion of the previous version: ")
     let partToIncrement: PartToIncrement = PartToIncrement.Minor; // default
-    // check for comments (but you have to use issues!)
+
     await octokit.rest.issues.listComments({
       owner: repo.owner,
       repo: repo.repo,
@@ -27,20 +26,18 @@ async function run(): Promise<void> {
       })
     });
 
-    console.log("Figuring out what the last tag was and creating the new tag based off that: ")
-
-    octokit.rest.repos.listTags({
+    await octokit.rest.repos.listTags({
       owner: repo.owner,
       repo: repo.repo
     })
       .then(async ({ data }) => {
 
-        let lastTag:Tag = new Tag("v0.0.0");
+        let lastTag: Tag = new Tag("v0.0.0");
         if (data.length > 0) {
           lastTag = determineLastTag(data);
         }
 
-        console.log("The last tag in the repository is:", lastTag.version);
+        console.log("The last tag in the repository is:", lastTag.toString());
         const newTag = generateNextTag(lastTag.version, partToIncrement);
 
         console.log("Creating new tag in repository:", newTag.toString())
