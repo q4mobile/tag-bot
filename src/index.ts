@@ -44,7 +44,7 @@ async function run(): Promise<void> {
         console.log("The last tag in the repository is:", lastTag.version);
         const newTag = generateNextTag(lastTag.version, partToIncrement);
 
-        console.log("Creating new tag in repository:", newTag)
+        console.log("Creating new tag in repository:", newTag.toString())
         const tag = await createTag(newTag.toString());
         const ref = await createRef("refs/tags/" + tag.data.tag, tag.data.sha)
 

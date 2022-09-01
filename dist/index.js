@@ -93,7 +93,7 @@ function run() {
                 const lastTag = (0, utils_1.determineLastTag)(data);
                 console.log("The last tag in the repository is:", lastTag.version);
                 const newTag = (0, utils_1.generateNextTag)(lastTag.version, partToIncrement);
-                console.log("Creating new tag in repository:", newTag);
+                console.log("Creating new tag in repository:", newTag.toString());
                 const tag = yield createTag(newTag.toString());
                 const ref = yield createRef("refs/tags/" + tag.data.tag, tag.data.sha);
                 console.log("Created new tag", tag.data.tag);
