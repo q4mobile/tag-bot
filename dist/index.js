@@ -59,8 +59,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
-const tag_1 = __nccwpck_require__(9297);
-const compare_versions_1 = __nccwpck_require__(4773);
 const utils_1 = __nccwpck_require__(4729);
 const config_1 = __importDefault(__nccwpck_require__(1677));
 const token = core.getInput("token");
@@ -84,7 +82,6 @@ function run() {
                 });
             }));
             console.log("Figuring out what the last tag was and creating the new tag based off that: ");
-            let Tags = new Array();
             octokit.rest.repos.listTags({
                 owner: repo.owner,
                 repo: repo.repo
@@ -93,16 +90,11 @@ function run() {
                 if (data.length === 0) {
                     throw Error("No tags found in repository");
                 }
-                data.forEach(element => {
-                    const newTag = new tag_1.Tag(element.name);
-                    Tags.push(newTag);
-                });
-                Tags.sort((a, b) => (0, compare_versions_1.compareVersions)(a.version, b.version));
-                const lastTag = Tags[Tags.length - 1];
+                const lastTag = (0, utils_1.determineLastTag)(data);
                 console.log("The last tag in the repository is:", lastTag.version);
                 const newTag = (0, utils_1.generateNextTag)(lastTag.version, partToIncrement);
                 console.log("Creating new tag in repository:", newTag);
-                const tag = yield createTag(newTag);
+                const tag = yield createTag(newTag.toString());
                 const ref = yield createRef("refs/tags/" + tag.data.tag, tag.data.sha);
                 console.log("Created new tag", tag.data.tag);
             }));
@@ -168,8 +160,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseCommentBody = exports.generateNextTag = exports.PartToIncrement = void 0;
+exports.determineLastTag = exports.parseCommentBody = exports.generateNextTag = exports.PartToIncrement = void 0;
+const compare_versions_1 = __nccwpck_require__(4773);
 const config_1 = __importDefault(__nccwpck_require__(1677));
+const tag_1 = __nccwpck_require__(9297);
 const version_1 = __nccwpck_require__(2792);
 var PartToIncrement;
 (function (PartToIncrement) {
@@ -185,10 +179,13 @@ function generateNextTag(lastTag, partToIncrememt) {
     switch (partToIncrememt) {
         case PartToIncrement.Major: {
             newTag.major++;
+            newTag.minor = 0;
+            newTag.patch = 0;
             break;
         }
         case PartToIncrement.Minor: {
             newTag.minor++;
+            newTag.patch = 0;
             break;
         }
         case PartToIncrement.Patch: {
@@ -196,18 +193,26 @@ function generateNextTag(lastTag, partToIncrememt) {
             break;
         }
     }
-    return newTag.toString();
+    return newTag;
 }
 exports.generateNextTag = generateNextTag;
 function parseCommentBody(body) {
-    if (body.startsWith(config_1.default.commentIdentifier)) {
-        let extractedPart = body.substring(config_1.default.commentIdentifier.length + 1);
-        extractedPart = extractedPart.charAt(0).toUpperCase() + extractedPart.slice(1);
-        let partToIncrement = PartToIncrement[extractedPart];
-        return partToIncrement;
-    }
+    let extractedPart = body.substring(config_1.default.commentIdentifier.length + 1);
+    extractedPart = extractedPart.charAt(0).toUpperCase() + extractedPart.slice(1);
+    let partToIncrement = PartToIncrement[extractedPart];
+    return partToIncrement;
 }
 exports.parseCommentBody = parseCommentBody;
+function determineLastTag(tags) {
+    let Tags = new Array();
+    tags.forEach(element => {
+        const newTag = new tag_1.Tag(element.name);
+        Tags.push(newTag);
+    });
+    Tags.sort((a, b) => (0, compare_versions_1.compareVersions)(a.version, b.version));
+    return Tags[Tags.length - 1];
+}
+exports.determineLastTag = determineLastTag;
 
 
 /***/ }),
@@ -224,6 +229,15 @@ class Version {
         this.major = newMajor;
         this.minor = newMinor;
         this.patch = newPatch;
+    }
+    static fromString(versionString) {
+        if (versionString.startsWith("v")) {
+            versionString = versionString.substring(1);
+        }
+        let versionArray = versionString.split('.').map(function (item) {
+            return parseInt(item);
+        });
+        return new this(versionArray[0], versionArray[1], versionArray[2]);
     }
     toString() {
         return "v" + this.major + "." + this.minor + "." + this.patch;

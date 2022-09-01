@@ -2,9 +2,8 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Tag } from "./tag";
 import { compareVersions } from 'compare-versions';
-import { generateNextTag, parseCommentBody, PartToIncrement } from "./utils";
+import { determineLastTag, generateNextTag, parseCommentBody, PartToIncrement } from "./utils";
 import config from "./config";
-
 
 const token = core.getInput("token");
 const octokit = github.getOctokit(token);
@@ -14,7 +13,7 @@ async function run(): Promise<void> {
   try {
 
     console.log("Checking comments to see if there are comments indicating if we should incrememnt something other than the minor portion of the previous version: ")
-    let partToIncrement: PartToIncrement | unknown = PartToIncrement.Minor; // default
+    let partToIncrement: PartToIncrement = PartToIncrement.Minor; // default
     // check for comments (but you have to use issues!)
     await octokit.rest.issues.listComments({
       owner: repo.owner,
@@ -30,7 +29,6 @@ async function run(): Promise<void> {
     });
 
     console.log("Figuring out what the last tag was and creating the new tag based off that: ")
-    let Tags: Array<Tag> = new Array<Tag>();
 
     octokit.rest.repos.listTags({
       owner: repo.owner,
@@ -42,19 +40,12 @@ async function run(): Promise<void> {
           throw Error("No tags found in repository");
         }
 
-        data.forEach(element => {
-          const newTag = new Tag(element.name);
-          Tags.push(newTag);
-        });
-
-        Tags.sort((a, b) => compareVersions(a.version, b.version));
-
-        const lastTag = Tags[Tags.length - 1];
+        const lastTag = determineLastTag(data);
         console.log("The last tag in the repository is:", lastTag.version);
         const newTag = generateNextTag(lastTag.version, partToIncrement);
 
         console.log("Creating new tag in repository:", newTag)
-        const tag = await createTag(newTag);
+        const tag = await createTag(newTag.toString());
         const ref = await createRef("refs/tags/" + tag.data.tag, tag.data.sha)
 
         console.log("Created new tag", tag.data.tag);
