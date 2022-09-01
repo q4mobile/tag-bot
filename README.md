@@ -36,6 +36,8 @@ By default the action will increment the minor part of the version when creating
 
 You are in luck
 
+#### Next tag is a major release
+
 If you wish to bump the next tag to a major version, include the following comment on the pull request
 
 ```/tag-bot major```
@@ -43,6 +45,9 @@ If you wish to bump the next tag to a major version, include the following comme
 When the pull request is closed, the next tag will be bumped to a new major version
 
 ```v1.1.0``` would generate ```v2.0.0``` as the next tag
+
+
+### Next tag is a hotfix
 
 If you want create a hotfix, include the following comment on the pull request
 
