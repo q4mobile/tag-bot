@@ -1,7 +1,6 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Tag } from "./tag";
-import { compareVersions } from 'compare-versions';
 import { determineLastTag, generateNextTag, parseCommentBody, PartToIncrement } from "./utils";
 import config from "./config";
 
@@ -36,11 +35,11 @@ async function run(): Promise<void> {
     })
       .then(async ({ data }) => {
 
-        if (data.length === 0) {
-          throw Error("No tags found in repository");
+        let lastTag:Tag = new Tag("v0.0.0");
+        if (data.length > 0) {
+          lastTag = determineLastTag(data);
         }
 
-        const lastTag = determineLastTag(data);
         console.log("The last tag in the repository is:", lastTag.version);
         const newTag = generateNextTag(lastTag.version, partToIncrement);
 

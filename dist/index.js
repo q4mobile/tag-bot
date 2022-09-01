@@ -59,6 +59,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
+const tag_1 = __nccwpck_require__(9297);
 const utils_1 = __nccwpck_require__(4729);
 const config_1 = __importDefault(__nccwpck_require__(1677));
 const token = core.getInput("token");
@@ -87,10 +88,10 @@ function run() {
                 repo: repo.repo
             })
                 .then(({ data }) => __awaiter(this, void 0, void 0, function* () {
-                if (data.length === 0) {
-                    throw Error("No tags found in repository");
+                let lastTag = new tag_1.Tag("v0.0.0");
+                if (data.length > 0) {
+                    lastTag = (0, utils_1.determineLastTag)(data);
                 }
-                const lastTag = (0, utils_1.determineLastTag)(data);
                 console.log("The last tag in the repository is:", lastTag.version);
                 const newTag = (0, utils_1.generateNextTag)(lastTag.version, partToIncrement);
                 console.log("Creating new tag in repository:", newTag.toString());
