@@ -4,7 +4,12 @@ exports.Tag = void 0;
 class Tag {
     constructor(tagName) {
         this.name = tagName;
-        this.version = this.name.substring(1);
+        if (this.name.startsWith("v")) {
+            this.version = this.name.substring(1);
+        }
+        else {
+            this.version = this.name;
+        }
     }
     toString() {
         return "v" + this.version;
