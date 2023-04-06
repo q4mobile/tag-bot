@@ -46,7 +46,6 @@ When the pull request is closed, the next tag will be bumped to a new major vers
 
 ```v1.1.0``` would generate ```v2.0.0``` as the next tag
 
-
 ### Next tag is a hotfix
 
 If you want create a hotfix, include the following comment on the pull request
