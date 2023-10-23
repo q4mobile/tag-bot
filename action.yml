@@ -1,9 +1,9 @@
-name: 'Tag Bog'
+name: "Tag Bog"
 inputs:
   token:
-    description: 'GitHub token'
+    description: "GitHub token"
     default: $
     required: true
 runs:
-  using: 'node12'
-  main: 'dist/index.js'
+  using: "node20"
+  main: "dist/index.js"
