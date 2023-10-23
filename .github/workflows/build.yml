@@ -37,4 +37,4 @@ jobs:
         run: npm run test
 
       - name: Build TagBot
-        run: npm run all
+        run: npm run build
