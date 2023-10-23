@@ -1,4 +1,4 @@
-name: "Tag Bog"
+name: "Tag Bot"
 inputs:
   token:
     description: "GitHub token"
