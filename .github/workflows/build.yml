@@ -20,7 +20,7 @@ jobs:
         run: echo "NODE_VERSION=$(node -p -e "require('./package.json').engines.node")" >> $GITHUB_ENV
 
       - name: Use Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: ${{ secrets.NPM_REGISTRY_URL}}
