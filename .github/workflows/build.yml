@@ -1,5 +1,5 @@
-name: 'Build & Test'
-on: 
+name: "Build & Test"
+on:
   pull_request:
     branches:
       - develop
@@ -11,7 +11,7 @@ on:
 
 jobs:
   setup_client:
-    name: 'Build and test'
+    name: "Build and test"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -24,14 +24,14 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ env.NODE_VERSION }}
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: ${{ secrets.NPM_REGISTRY_URL}}
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
 
       - name: Install Client Dependencies
         run: npm install
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
 
       - name: Run Unit Tests
         run: npm run test
