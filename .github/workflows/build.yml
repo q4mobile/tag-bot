@@ -1,0 +1,39 @@
+name: "Build & Test"
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  setup_client:
+    name: "Build and test"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read nodejs version from package.json
+        run: echo "NODE_VERSION=$(node -p -e "require('./package.json').engines.node")" >> $GITHUB_ENV
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: ${{ secrets.NPM_REGISTRY_URL}}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
+
+      - name: Install Client Dependencies
+        run: npm install
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
+
+      - name: Run Unit Tests
+        run: npm run test
+
+      - name: Build TagBot
+        run: npm run build
