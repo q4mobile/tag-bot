@@ -32,6 +32,10 @@ outputs:
     description: "ISO timestamp when the action was executed"
   skipped:
     description: "Set to 'true' when tagging was skipped due to /tag-bot skip command"
+  duplicate_resolved:
+    description: "Set to 'true' when a duplicate tag was detected but resolved (same commit)"
+  existing_tag_sha:
+    description: "SHA of existing tag when duplicate is resolved (only present when duplicate_resolved is true)"
 runs:
   using: "node20"
   main: "dist/index.js"
