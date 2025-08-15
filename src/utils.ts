@@ -10,6 +10,122 @@ export enum PartToIncrement {
   Patch
 }
 
+export enum TagBotCommand {
+  Skip = "skip",
+  ManualVersion = "manual",
+  Increment = "increment"
+}
+
+export interface TagBotCommandResult {
+  command: TagBotCommand;
+  incrementType?: PartToIncrement;
+  manualVersion?: string;
+  shouldSkip: boolean;
+}
+
+/**
+ * Parses tag-bot comment and returns command details
+ * @param body - Comment body to parse
+ * @returns TagBotCommandResult with parsed command information
+ */
+export function parseCommentBody(body: string): TagBotCommandResult {
+  try {
+    validateCommentBody(body);
+  } catch (error) {
+    throw new ValidationError(`Invalid comment body: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+
+  if (!body.startsWith(config.commentIdentifier)) {
+    throw new ValidationError(`Comment must start with ${config.commentIdentifier}`);
+  }
+
+  // Extract the command part after /tag-bot
+  const commandPart = body.substring(config.commentIdentifier.length).trim();
+  
+  if (!commandPart || commandPart.length === 0) {
+    throw new ValidationError(`No command specified after ${config.commentIdentifier}. Use: skip, major, minor, patch, or v1.2.3`);
+  }
+
+  // Check for skip command
+  if (commandPart.toLowerCase() === 'skip') {
+    return {
+      command: TagBotCommand.Skip,
+      shouldSkip: true
+    };
+  }
+
+  // Check for manual version specification (e.g., v2.5.0)
+  if (commandPart.startsWith('v') && commandPart.match(/^v\d+\.\d+\.\d+$/)) {
+    const version = commandPart.substring(1); // Remove 'v' prefix
+    return {
+      command: TagBotCommand.ManualVersion,
+      manualVersion: version,
+      shouldSkip: false
+    };
+  }
+
+  // Check for manual version specification without 'v' prefix (e.g., 2.5.0)
+  if (commandPart.match(/^\d+\.\d+\.\d+$/)) {
+    return {
+      command: TagBotCommand.ManualVersion,
+      manualVersion: commandPart,
+      shouldSkip: false
+    };
+  }
+
+  // Check for increment commands (major, minor, patch)
+  const incrementType = commandPart.charAt(0).toUpperCase() + commandPart.slice(1).toLowerCase();
+  const partToIncrement = PartToIncrement[incrementType as keyof typeof PartToIncrement];
+  
+  if (partToIncrement === undefined) {
+    throw new ValidationError(
+      `Invalid command: "${commandPart}". Valid commands are:\n` +
+      `• skip - Skip tagging for this PR\n` +
+      `• major - Increment major version\n` +
+      `• minor - Increment minor version\n` +
+      `• patch - Increment patch version\n` +
+      `• v1.2.3 - Specify exact version`
+    );
+  }
+
+  return {
+    command: TagBotCommand.Increment,
+    incrementType: partToIncrement,
+    shouldSkip: false
+  };
+}
+
+/**
+ * Creates a new tag with the specified manual version
+ * @param manualVersion - Manual version string (e.g., "2.5.0")
+ * @returns Version object
+ */
+export function createManualVersion(manualVersion: string): Version {
+  if (!manualVersion || typeof manualVersion !== 'string') {
+    throw new ValidationError(`Manual version must be a non-empty string, got ${typeof manualVersion}`);
+  }
+
+  // Validate version format
+  const versionPattern = /^\d+\.\d+\.\d+$/;
+  if (!versionPattern.test(manualVersion)) {
+    throw new ValidationError(`Invalid version format: must be in format x.y.z (e.g., 2.5.0), got ${manualVersion}`);
+  }
+
+  const parts = manualVersion.split('.').map(part => {
+    const num = parseInt(part);
+    if (isNaN(num) || num < 0) {
+      throw new ValidationError(`Invalid version part: ${part} is not a non-negative integer`);
+    }
+    return num;
+  });
+
+  if (parts.length !== 3) {
+    throw new ValidationError(`Version must have exactly 3 parts, got ${parts.length} parts`);
+  }
+
+  return new Version(parts[0], parts[1], parts[2]);
+}
+
 export function generateNextTag(lastTag: string, partToIncrememt: PartToIncrement): Version {
   if (!lastTag || typeof lastTag !== 'string') {
     throw new ValidationError(`Last tag must be a non-empty string, got ${typeof lastTag}`);
@@ -51,33 +167,6 @@ export function generateNextTag(lastTag: string, partToIncrememt: PartToIncremen
   }
 
   return newTag;
-}
-
-export function parseCommentBody(body: string): PartToIncrement {
-  try {
-    validateCommentBody(body);
-  } catch (error) {
-    throw new ValidationError(`Invalid comment body: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-
-  if (!body.startsWith(config.commentIdentifier)) {
-    throw new ValidationError(`Comment must start with ${config.commentIdentifier}`);
-  }
-
-  let extractedPart: string = body.substring(config.commentIdentifier.length + 1);
-  if (!extractedPart || extractedPart.trim().length === 0) {
-    throw new ValidationError(`No version increment type specified after ${config.commentIdentifier}`);
-  }
-
-  extractedPart = extractedPart.charAt(0).toUpperCase() + extractedPart.slice(1);
-
-  let partToIncrement: PartToIncrement = PartToIncrement[extractedPart as keyof typeof PartToIncrement];
-  
-  if (partToIncrement === undefined) {
-    throw new ValidationError(`Invalid version increment type: ${extractedPart}. Must be one of: major, minor, patch`);
-  }
-
-  return partToIncrement;
 }
 
 export function determineLastTag(tags: Array<any>): Tag {

@@ -1,7 +1,7 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Tag } from "./tag";
-import { determineLastTag, generateNextTag, parseCommentBody, PartToIncrement } from "./utils";
+import { determineLastTag, generateNextTag, parseCommentBody, PartToIncrement, TagBotCommand, createManualVersion } from "./utils";
 import { validateGitHubContext, validateGitHubResponse, logValidationError, logError, ValidationError } from "./validation";
 import config from "./config";
 
@@ -34,6 +34,8 @@ async function run(): Promise<void> {
     core.info(`Commit SHA: ${github.context.sha}`);
 
     let partToIncrement: PartToIncrement = PartToIncrement.Minor; // default
+    let shouldSkip = false;
+    let manualVersion: string | undefined;
 
     // Fetch and validate PR comments
     try {
@@ -49,8 +51,19 @@ async function run(): Promise<void> {
         commentsResponse.data.forEach((comment, index) => {
           if (comment && comment.body && comment.body.startsWith(config.commentIdentifier)) {
             try {
-              partToIncrement = parseCommentBody(comment.body);
+              const commandResult = parseCommentBody(comment.body);
               core.info(`Found tag-bot command: ${comment.body.trim()}`);
+              
+              if (commandResult.shouldSkip) {
+                shouldSkip = true;
+                core.info("Tag creation skipped due to /tag-bot skip command");
+              } else if (commandResult.command === TagBotCommand.ManualVersion && commandResult.manualVersion) {
+                manualVersion = commandResult.manualVersion;
+                core.info(`Manual version specified: ${manualVersion}`);
+              } else if (commandResult.command === TagBotCommand.Increment && commandResult.incrementType !== undefined) {
+                partToIncrement = commandResult.incrementType;
+                core.info(`Increment type specified: ${PartToIncrement[partToIncrement].toLowerCase()}`);
+              }
             } catch (error) {
               core.warning(`Invalid tag-bot command in comment ${index + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
               // Continue with default behavior
@@ -61,6 +74,13 @@ async function run(): Promise<void> {
     } catch (error) {
       core.warning(`Failed to fetch PR comments: ${error instanceof Error ? error.message : 'Unknown error'}`);
       core.info("Continuing with default minor version increment");
+    }
+
+    // Check if tagging should be skipped
+    if (shouldSkip) {
+      core.info("Tag creation skipped as requested. Exiting.");
+      core.setOutput("skipped", "true");
+      return;
     }
 
     // Fetch and validate repository tags
@@ -93,8 +113,15 @@ async function run(): Promise<void> {
       // Generate new tag
       let newTag: any;
       try {
-        newTag = generateNextTag(lastTag.version, partToIncrement);
-        core.info(`Generated new tag: ${newTag.toString()}`);
+        if (manualVersion) {
+          // Use manual version if specified
+          newTag = createManualVersion(manualVersion);
+          core.info(`Using manual version: ${newTag.toString()}`);
+        } else {
+          // Generate next tag based on increment type
+          newTag = generateNextTag(lastTag.version, partToIncrement);
+          core.info(`Generated new tag: ${newTag.toString()}`);
+        }
       } catch (error) {
         if (error instanceof ValidationError) {
           logValidationError(error);
@@ -114,6 +141,10 @@ async function run(): Promise<void> {
         core.info(`Tag reference created: ${ref.data.ref}`);
         core.setOutput("tag", tag.data.tag);
         core.setOutput("sha", tag.data.sha);
+        core.setOutput("increment_type", manualVersion ? "manual" : PartToIncrement[partToIncrement].toLowerCase());
+        if (manualVersion) {
+          core.setOutput("manual_version", manualVersion);
+        }
       } catch (error) {
         logError(error as Error, "Tag creation");
         return;
