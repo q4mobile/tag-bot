@@ -22,7 +22,9 @@ import {
   validateBranchProtection,
   logValidationError, 
   logError, 
-  ValidationError 
+  ValidationError,
+  withGitHubRetry,
+  DEFAULT_RETRY_CONFIG
 } from "./validation";
 import config from "./config";
 
@@ -58,24 +60,41 @@ async function run(): Promise<void> {
     core.info("🔒 Validating branch protection and PR status...");
     
     try {
-      // Validate branch protection rules
-      await validateBranchProtection(octokit, repo, github.context.payload.pull_request!.base.ref);
+      // Validate branch protection rules with retry
+      const protectionResult = await withGitHubRetry(
+        () => validateBranchProtection(octokit, repo, github.context.payload.pull_request!.base.ref),
+        { maxAttempts: 2, baseDelay: 2000 }, // Shorter retry for protection check
+        "Branch protection validation"
+      );
+      
+      if (!protectionResult.success) {
+        core.warning(`Branch protection validation warning: ${protectionResult.error?.message}`);
+        core.info("Continuing with tag creation process...");
+      }
     } catch (error) {
       core.warning(`Branch protection validation warning: ${error instanceof Error ? error.message : 'Unknown error'}`);
       core.info("Continuing with tag creation process...");
     }
 
-    // Fetch PR details for validation
+    // Fetch PR details for validation with retry
     let prDetails: any;
     try {
-      const prResponse = await octokit.rest.pulls.get({
-        owner: repo.owner,
-        repo: repo.repo,
-        pull_number: github.context.payload.pull_request!.number
-      });
+      const prResult = await withGitHubRetry(
+        () => octokit.rest.pulls.get({
+          owner: repo.owner,
+          repo: repo.repo,
+          pull_number: github.context.payload.pull_request!.number
+        }),
+        { maxAttempts: 3, baseDelay: 1000 },
+        "PR details fetch"
+      );
 
-      validateGitHubResponse(prResponse.data, "PR response");
-      prDetails = prResponse.data;
+      if (!prResult.success) {
+        throw new ValidationError(`Failed to fetch PR details: ${prResult.error?.message}`);
+      }
+
+      validateGitHubResponse(prResult.data, "PR response");
+      prDetails = prResult.data;
       
       core.info(`PR Title: ${prDetails.title || 'No title'}`);
       core.info(`PR State: ${prDetails.state}`);
@@ -101,14 +120,26 @@ async function run(): Promise<void> {
       return;
     }
 
-    // Validate required status checks
+    // Validate required status checks with retry
     try {
       // Get required checks from config or use default
       const requiredChecks = core.getInput("required_checks") ? 
         core.getInput("required_checks").split(',').map(check => check.trim()) : 
         undefined;
       
-      await validateRequiredStatusChecks(octokit, repo, github.context.sha, requiredChecks);
+      const statusResult = await withGitHubRetry(
+        async () => {
+          await validateRequiredStatusChecks(octokit, repo, github.context.sha, requiredChecks);
+          return { data: "success" };
+        },
+        { maxAttempts: 3, baseDelay: 2000 }, // Longer retry for status checks
+        "Status checks validation"
+      );
+      
+      if (!statusResult.success) {
+        throw new ValidationError(`Status checks validation failed: ${statusResult.error?.message}`);
+      }
+      
       core.info("✅ Status checks validation passed");
     } catch (error) {
       if (error instanceof ValidationError) {
@@ -125,18 +156,26 @@ async function run(): Promise<void> {
     let shouldSkip = false;
     let manualVersion: string | undefined;
 
-    // Fetch and validate PR comments
+    // Fetch and validate PR comments with retry
     try {
-      const commentsResponse = await octokit.rest.issues.listComments({
-        owner: repo.owner,
-        repo: repo.repo,
-        issue_number: github.context.payload.pull_request!.number
-      });
+      const commentsResult = await withGitHubRetry(
+        () => octokit.rest.issues.listComments({
+          owner: repo.owner,
+          repo: repo.repo,
+          issue_number: github.context.payload.pull_request!.number
+        }),
+        { maxAttempts: 3, baseDelay: 1000 },
+        "PR comments fetch"
+      );
 
-      validateGitHubResponse(commentsResponse.data, "Comments response");
+      if (!commentsResult.success) {
+        throw new ValidationError(`Failed to fetch PR comments: ${commentsResult.error?.message}`);
+      }
 
-      if (commentsResponse.data && Array.isArray(commentsResponse.data)) {
-        commentsResponse.data.forEach((comment, index) => {
+      validateGitHubResponse(commentsResult.data, "Comments response");
+
+      if (commentsResult.data && Array.isArray(commentsResult.data)) {
+        commentsResult.data.forEach((comment, index) => {
           if (comment && comment.body && comment.body.startsWith(config.commentIdentifier)) {
             try {
               const commandResult = parseCommentBody(comment.body);
@@ -183,20 +222,29 @@ async function run(): Promise<void> {
       return;
     }
 
-    // Fetch and validate repository tags
-    let tagsResponse: any;
+    // Fetch and validate repository tags with retry
+    let tagsData: any[] = [];
     try {
-      tagsResponse = await octokit.rest.repos.listTags({
-        owner: repo.owner,
-        repo: repo.repo
-      });
+      const tagsResult = await withGitHubRetry(
+        () => octokit.rest.repos.listTags({
+          owner: repo.owner,
+          repo: repo.repo
+        }),
+        { maxAttempts: 3, baseDelay: 1000 },
+        "Repository tags fetch"
+      );
 
-      validateGitHubResponse(tagsResponse.data, "Tags response");
+      if (!tagsResult.success) {
+        throw new ValidationError(`Failed to fetch repository tags: ${tagsResult.error?.message}`);
+      }
+
+      tagsData = tagsResult.data as any[];
+      validateGitHubResponse(tagsData, "Tags response");
 
       let lastTag: Tag;
-      if (tagsResponse.data && tagsResponse.data.length > 0) {
+      if (tagsData && tagsData.length > 0) {
         try {
-          lastTag = determineLastTag(tagsResponse.data);
+          lastTag = determineLastTag(tagsData);
           core.info(`Last tag in repository: ${lastTag.toString()}`);
         } catch (error) {
           if (error instanceof ValidationError) {
@@ -236,7 +284,7 @@ async function run(): Promise<void> {
       core.info("🔍 Checking for duplicate tags and conflicts...");
       
       const tagName = newTag.toString();
-      const duplicateCheck = checkDuplicateTag(tagsResponse.data, tagName);
+      const duplicateCheck = checkDuplicateTag(tagsData, tagName);
       
       if (duplicateCheck.exists) {
         core.warning(`⚠️  Tag conflict detected: ${duplicateCheck.conflictType}`);
@@ -276,7 +324,7 @@ async function run(): Promise<void> {
             const safeVersion = findNextAvailableVersion(
               new Version(parseInt(lastTag.version.split('.')[0]), parseInt(lastTag.version.split('.')[1]), parseInt(lastTag.version.split('.')[2])),
               partToIncrement,
-              tagsResponse.data
+              tagsData
             );
             
             const safeTagName = `v${safeVersion.toString()}`;
@@ -297,25 +345,47 @@ async function run(): Promise<void> {
       }
 
       // Final safety check before creation
-      const finalSafetyCheck = validateTagSafety(tagsResponse.data, newTag.toString());
+      const finalSafetyCheck = validateTagSafety(tagsData, newTag.toString());
       if (!finalSafetyCheck.safe) {
         throw new ValidationError(`Final safety check failed: ${finalSafetyCheck.message}`);
       }
 
-      // Create the tag
+      // Create the tag with retry
       try {
         core.info(`Creating new tag: ${newTag.toString()}`);
-        const tag = await createTag(octokit, repo, newTag.toString());
-        const ref = await createRef(octokit, repo, "refs/tags/" + tag.data.tag, tag.data.sha);
         
-        core.info(`Successfully created tag: ${tag.data.tag}`);
-        core.info(`Tag reference created: ${ref.data.ref}`);
+        const tagResult = await withGitHubRetry(
+          () => createTag(octokit, repo, newTag.toString()),
+          { maxAttempts: 3, baseDelay: 2000 }, // Longer retry for tag creation
+          "Tag creation"
+        );
+        
+        if (!tagResult.success) {
+          throw new Error(`Tag creation failed: ${tagResult.error?.message}`);
+        }
+        
+        const tag = tagResult.data as any;
+        
+        const refResult = await withGitHubRetry(
+          () => createRef(octokit, repo, "refs/tags/" + tag.tag, tag.sha),
+          { maxAttempts: 3, baseDelay: 2000 },
+          "Tag reference creation"
+        );
+        
+        if (!refResult.success) {
+          throw new Error(`Tag reference creation failed: ${refResult.error?.message}`);
+        }
+        
+        const ref = refResult.data as any;
+        
+        core.info(`Successfully created tag: ${tag.tag}`);
+        core.info(`Tag reference created: ${ref.ref}`);
         
         // Set comprehensive GitHub Action outputs
-        core.setOutput("tag", tag.data.tag);                    // Newly created tag
+        core.setOutput("tag", tag.tag);                    // Newly created tag
         core.setOutput("previous_tag", lastTag.toString());     // Previous tag that was incremented from
-        core.setOutput("sha", tag.data.sha);                   // Commit SHA of the tag
-        core.setOutput("ref", ref.data.ref);                   // Git reference created
+        core.setOutput("sha", tag.sha);                   // Commit SHA of the tag
+        core.setOutput("ref", ref.ref);                   // Git reference created
         
         // Version increment information
         if (manualVersion) {
@@ -335,10 +405,10 @@ async function run(): Promise<void> {
         
         // Log all outputs for debugging
         core.info("GitHub Action outputs set:");
-        core.info(`  tag: ${tag.data.tag}`);
+        core.info(`  tag: ${tag.tag}`);
         core.info(`  previous_tag: ${lastTag.toString()}`);
         core.info(`  increment_type: ${manualVersion ? "manual" : PartToIncrement[partToIncrement].toLowerCase()}`);
-        core.info(`  sha: ${tag.data.sha}`);
+        core.info(`  sha: ${tag.sha}`);
         core.info(`  repository: ${repo.owner}/${repo.repo}`);
         core.info(`  pull_request: #${github.context.payload.pull_request!.number}`);
         
