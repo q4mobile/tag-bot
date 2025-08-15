@@ -2,7 +2,16 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Tag } from "./tag";
 import { determineLastTag, generateNextTag, parseCommentBody, PartToIncrement, TagBotCommand, createManualVersion } from "./utils";
-import { validateGitHubContext, validateGitHubResponse, logValidationError, logError, ValidationError } from "./validation";
+import { 
+  validateGitHubContext, 
+  validateGitHubResponse, 
+  validatePRMergeStatus,
+  validateRequiredStatusChecks,
+  validateBranchProtection,
+  logValidationError, 
+  logError, 
+  ValidationError 
+} from "./validation";
 import config from "./config";
 
 async function run(): Promise<void> {
@@ -32,6 +41,73 @@ async function run(): Promise<void> {
     core.info(`Repository: ${repo.owner}/${repo.repo}`);
     core.info(`Pull Request: #${github.context.payload.pull_request!.number}`);
     core.info(`Commit SHA: ${github.context.sha}`);
+
+    // 🔒 BRANCH PROTECTION & VALIDATION
+    core.info("🔒 Validating branch protection and PR status...");
+    
+    try {
+      // Validate branch protection rules
+      await validateBranchProtection(octokit, repo, github.context.payload.pull_request!.base.ref);
+    } catch (error) {
+      core.warning(`Branch protection validation warning: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      core.info("Continuing with tag creation process...");
+    }
+
+    // Fetch PR details for validation
+    let prDetails: any;
+    try {
+      const prResponse = await octokit.rest.pulls.get({
+        owner: repo.owner,
+        repo: repo.repo,
+        pull_number: github.context.payload.pull_request!.number
+      });
+
+      validateGitHubResponse(prResponse.data, "PR response");
+      prDetails = prResponse.data;
+      
+      core.info(`PR Title: ${prDetails.title || 'No title'}`);
+      core.info(`PR State: ${prDetails.state}`);
+      core.info(`PR Merged: ${prDetails.merged ? 'Yes' : 'No'}`);
+      if (prDetails.merged) {
+        core.info(`Merge Commit SHA: ${prDetails.merge_commit_sha}`);
+        core.info(`Merged At: ${prDetails.merged_at}`);
+      }
+    } catch (error) {
+      throw new ValidationError(`Failed to fetch PR details: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    // Validate PR merge status
+    try {
+      validatePRMergeStatus(prDetails);
+      core.info("✅ PR merge status validation passed");
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        logValidationError(error);
+      } else {
+        logError(error as Error, "PR merge status validation");
+      }
+      return;
+    }
+
+    // Validate required status checks
+    try {
+      // Get required checks from config or use default
+      const requiredChecks = core.getInput("required_checks") ? 
+        core.getInput("required_checks").split(',').map(check => check.trim()) : 
+        undefined;
+      
+      await validateRequiredStatusChecks(octokit, repo, github.context.sha, requiredChecks);
+      core.info("✅ Status checks validation passed");
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        logValidationError(error);
+      } else {
+        logError(error as Error, "Status checks validation");
+      }
+      return;
+    }
+
+    core.info("🔒 All branch protection and validation checks passed!");
 
     let partToIncrement: PartToIncrement = PartToIncrement.Minor; // default
     let shouldSkip = false;

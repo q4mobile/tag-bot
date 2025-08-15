@@ -91,6 +91,167 @@ export function validateGitHubContext(context: any): boolean {
 }
 
 /**
+ * Validates that a pull request is actually merged (not just closed)
+ * @param pr - Pull request object from GitHub API
+ * @returns true if valid, throws ValidationError if invalid
+ */
+export function validatePRMergeStatus(pr: any): boolean {
+  if (!pr) {
+    throw new ValidationError('Pull request object is required');
+  }
+
+  if (pr.merged_at === null || pr.merged_at === undefined) {
+    throw new ValidationError(`Pull request #${pr.number} is not merged. It may be closed without merging or still open.`);
+  }
+
+  if (pr.state !== 'closed') {
+    throw new ValidationError(`Pull request #${pr.number} is not in closed state. Current state: ${pr.state}`);
+  }
+
+  if (pr.merge_commit_sha === null || pr.merge_commit_sha === undefined) {
+    throw new ValidationError(`Pull request #${pr.number} does not have a merge commit SHA.`);
+  }
+
+  return true;
+}
+
+/**
+ * Validates that all required status checks have passed
+ * @param octokit - GitHub API client
+ * @param repo - Repository information
+ * @param sha - Commit SHA to check
+ * @param requiredChecks - Array of required status check names (optional)
+ * @returns true if valid, throws ValidationError if invalid
+ */
+export async function validateRequiredStatusChecks(
+  octokit: any, 
+  repo: any, 
+  sha: string, 
+  requiredChecks?: string[]
+): Promise<boolean> {
+  try {
+    // Get the combined status for the commit
+    const statusResponse = await octokit.rest.repos.getCombinedStatusForRef({
+      owner: repo.owner,
+      repo: repo.repo,
+      ref: sha
+    });
+
+    validateGitHubResponse(statusResponse.data, "Status response");
+
+    const combinedStatus = statusResponse.data;
+    
+    if (combinedStatus.state === 'pending') {
+      throw new ValidationError(`Commit ${sha} has pending status checks. All checks must complete before tagging.`);
+    }
+
+    if (combinedStatus.state === 'failure') {
+      const failedChecks = combinedStatus.statuses.filter((status: any) => status.state === 'failure');
+      const failedCheckNames = failedChecks.map((status: any) => status.context).join(', ');
+      throw new ValidationError(`Commit ${sha} has failed status checks: ${failedCheckNames}`);
+    }
+
+    if (combinedStatus.state === 'error') {
+      throw new ValidationError(`Commit ${sha} has error status checks. Please resolve these issues before tagging.`);
+    }
+
+    // If specific required checks are specified, validate each one
+    if (requiredChecks && requiredChecks.length > 0) {
+      const availableChecks = combinedStatus.statuses.map((status: any) => status.context);
+      const missingChecks = requiredChecks.filter(check => !availableChecks.includes(check));
+      
+      if (missingChecks.length > 0) {
+        throw new ValidationError(`Required status checks missing: ${missingChecks.join(', ')}. Available checks: ${availableChecks.join(', ')}`);
+      }
+
+      const failedRequiredChecks = combinedStatus.statuses
+        .filter((status: any) => requiredChecks.includes(status.context) && status.state !== 'success');
+      
+      if (failedRequiredChecks.length > 0) {
+        const failedCheckNames = failedRequiredChecks.map((status: any) => status.context).join(', ');
+        throw new ValidationError(`Required status checks failed: ${failedCheckNames}`);
+      }
+    }
+
+    // All checks passed
+    core.info(`✅ All status checks passed for commit ${sha}`);
+    if (requiredChecks && requiredChecks.length > 0) {
+      core.info(`✅ Required checks verified: ${requiredChecks.join(', ')}`);
+    }
+
+    return true;
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+    throw new ValidationError(`Failed to validate status checks: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Validates branch protection rules are satisfied
+ * @param octokit - GitHub API client
+ * @param repo - Repository information
+ * @param branch - Branch name to check
+ * @returns true if valid, throws ValidationError if invalid
+ */
+export async function validateBranchProtection(
+  octokit: any, 
+  repo: any, 
+  branch: string
+): Promise<boolean> {
+  try {
+    // Get branch protection rules
+    const protectionResponse = await octokit.rest.repos.getBranchProtection({
+      owner: repo.owner,
+      repo: repo.repo,
+      branch: branch
+    });
+
+    validateGitHubResponse(protectionResponse.data, "Branch protection response");
+
+    const protection = protectionResponse.data;
+    
+    // Check if required status checks are enabled
+    if (protection.required_status_checks && protection.required_status_checks.strict) {
+      core.info(`✅ Branch protection: Strict status checks are required`);
+    }
+
+    if (protection.required_status_checks && protection.required_status_checks.contexts) {
+      const requiredChecks = protection.required_status_checks.contexts;
+      core.info(`✅ Branch protection: Required status checks: ${requiredChecks.join(', ')}`);
+    }
+
+    // Check if PR reviews are required
+    if (protection.required_pull_request_reviews) {
+      core.info(`✅ Branch protection: PR reviews are required`);
+      if (protection.required_pull_request_reviews.required_approving_review_count) {
+        core.info(`✅ Branch protection: ${protection.required_pull_request_reviews.required_approving_review_count} approving reviews required`);
+      }
+    }
+
+    // Check if branch is up to date requirement
+    if (protection.required_status_checks && protection.required_status_checks.strict) {
+      core.info(`✅ Branch protection: Branch must be up to date before merging`);
+    }
+
+    return true;
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+    
+    // If branch protection is not configured, that's okay (not all repos use it)
+    if (error.status === 404) {
+      core.info(`ℹ️  No branch protection rules configured for ${branch} - skipping protection validation`);
+      return true;
+    }
+    
+    throw new ValidationError(`Failed to validate branch protection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
  * Validates comment body for tag-bot commands
  * @param commentBody - Comment body to validate
  * @returns true if valid, throws ValidationError if invalid

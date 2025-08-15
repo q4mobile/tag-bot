@@ -3,6 +3,10 @@ inputs:
   token:
     description: "GitHub token"
     required: true
+  required_checks:
+    description: "Comma-separated list of required status checks that must pass before tagging (e.g., 'ci,test,security')"
+    required: false
+    default: ""
 outputs:
   tag:
     description: "The newly created tag name (e.g., v1.2.0)"
