@@ -1,7 +1,19 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import { Tag } from "./tag";
-import { determineLastTag, generateNextTag, parseCommentBody, PartToIncrement, TagBotCommand, createManualVersion } from "./utils";
+import { Version } from "./version";
+import { 
+  determineLastTag, 
+  generateNextTag, 
+  parseCommentBody, 
+  PartToIncrement, 
+  TagBotCommand, 
+  createManualVersion,
+  checkDuplicateTag,
+  validateTagSafety,
+  generateSafeTagName,
+  findNextAvailableVersion
+} from "./utils";
 import { 
   validateGitHubContext, 
   validateGitHubResponse, 
@@ -172,8 +184,9 @@ async function run(): Promise<void> {
     }
 
     // Fetch and validate repository tags
+    let tagsResponse: any;
     try {
-      const tagsResponse = await octokit.rest.repos.listTags({
+      tagsResponse = await octokit.rest.repos.listTags({
         owner: repo.owner,
         repo: repo.repo
       });
@@ -217,6 +230,76 @@ async function run(): Promise<void> {
           logError(error as Error, "Tag generation");
         }
         return;
+      }
+
+      // 🔍 DUPLICATE TAG PREVENTION
+      core.info("🔍 Checking for duplicate tags and conflicts...");
+      
+      const tagName = newTag.toString();
+      const duplicateCheck = checkDuplicateTag(tagsResponse.data, tagName);
+      
+      if (duplicateCheck.exists) {
+        core.warning(`⚠️  Tag conflict detected: ${duplicateCheck.conflictType}`);
+        core.warning(`   ${duplicateCheck.suggestedResolution}`);
+        
+        if (duplicateCheck.conflictType === 'exact_match') {
+          // Check if the existing tag points to the same commit
+          if (duplicateCheck.existingTag?.commit?.sha === github.context.sha) {
+            core.info("✅ Existing tag points to the same commit - no action needed");
+            core.setOutput("tag", tagName);
+            core.setOutput("previous_tag", lastTag.toString());
+            core.setOutput("increment_type", manualVersion ? "manual" : PartToIncrement[partToIncrement].toLowerCase());
+            core.setOutput("version_source", manualVersion ? "manual_specification" : "automatic_increment");
+            core.setOutput("repository", `${repo.owner}/${repo.repo}`);
+            core.setOutput("pull_request", github.context.payload.pull_request!.number.toString());
+            core.setOutput("branch", github.context.payload.pull_request!.base.ref);
+            core.setOutput("action_timestamp", new Date().toISOString());
+            core.setOutput("duplicate_resolved", "true");
+            core.setOutput("existing_tag_sha", duplicateCheck.existingTag.commit.sha);
+            
+            core.info("Tag already exists and points to the same commit. Exiting successfully.");
+            return;
+          } else {
+            // Different commit - this is a real conflict
+            throw new ValidationError(
+              `Tag ${tagName} already exists and points to a different commit (${duplicateCheck.existingTag.commit?.sha || 'unknown'}). ` +
+              `Current commit: ${github.context.sha}. ` +
+              `This suggests a version conflict or the tag was created by another process. ` +
+              `Please use a different version or resolve the conflict manually.`
+            );
+          }
+        } else if (duplicateCheck.conflictType === 'version_conflict') {
+          // Version format conflict - try to find a safe alternative
+          core.info("🔄 Attempting to find a safe alternative version...");
+          
+          try {
+            const safeVersion = findNextAvailableVersion(
+              new Version(parseInt(lastTag.version.split('.')[0]), parseInt(lastTag.version.split('.')[1]), parseInt(lastTag.version.split('.')[2])),
+              partToIncrement,
+              tagsResponse.data
+            );
+            
+            const safeTagName = `v${safeVersion.toString()}`;
+            core.info(`✅ Found safe alternative: ${safeTagName}`);
+            newTag = safeVersion;
+            
+            // Update the tag name for creation
+            core.info(`🔄 Using safe tag name: ${safeTagName}`);
+          } catch (error) {
+            throw new ValidationError(
+              `Unable to resolve version conflict automatically. ${duplicateCheck.suggestedResolution} ` +
+              `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+            );
+          }
+        }
+      } else {
+        core.info("✅ No duplicate tags found - safe to proceed");
+      }
+
+      // Final safety check before creation
+      const finalSafetyCheck = validateTagSafety(tagsResponse.data, newTag.toString());
+      if (!finalSafetyCheck.safe) {
+        throw new ValidationError(`Final safety check failed: ${finalSafetyCheck.message}`);
       }
 
       // Create the tag

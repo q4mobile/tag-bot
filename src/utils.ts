@@ -23,6 +23,191 @@ export interface TagBotCommandResult {
   shouldSkip: boolean;
 }
 
+export interface DuplicateTagInfo {
+  exists: boolean;
+  tagName: string;
+  existingTag?: any;
+  conflictType: 'exact_match' | 'version_conflict' | 'none';
+  suggestedResolution?: string;
+}
+
+/**
+ * Checks if a tag already exists in the repository
+ * @param tags - Array of existing tags from GitHub API
+ * @param tagName - Tag name to check
+ * @returns DuplicateTagInfo with detailed conflict information
+ */
+export function checkDuplicateTag(tags: Array<any>, tagName: string): DuplicateTagInfo {
+  if (!tags || !Array.isArray(tags)) {
+    return {
+      exists: false,
+      tagName,
+      conflictType: 'none'
+    };
+  }
+
+  // Check for exact match
+  const exactMatch = tags.find(tag => tag.name === tagName);
+  if (exactMatch) {
+    return {
+      exists: true,
+      tagName,
+      existingTag: exactMatch,
+      conflictType: 'exact_match',
+      suggestedResolution: `Tag ${tagName} already exists and points to commit ${exactMatch.commit?.sha || 'unknown'}. Consider using a different version or verify if this tag is correct.`
+    };
+  }
+
+  // Check for version conflicts (same version number, different format)
+  const cleanTagName = tagName.startsWith('v') ? tagName.substring(1) : tagName;
+  const versionConflict = tags.find(tag => {
+    const cleanExisting = tag.name.startsWith('v') ? tag.name.substring(1) : tag.name;
+    return cleanExisting === cleanTagName;
+  });
+
+  if (versionConflict) {
+    return {
+      exists: true,
+      tagName,
+      existingTag: versionConflict,
+      conflictType: 'version_conflict',
+      suggestedResolution: `Version ${cleanTagName} already exists as tag ${versionConflict.name}. This suggests a version format conflict. Consider using a different version or standardizing your tag format.`
+    };
+  }
+
+  return {
+    exists: false,
+    tagName,
+    conflictType: 'none'
+  };
+}
+
+/**
+ * Finds the next available version that doesn't conflict with existing tags
+ * @param baseVersion - Base version to start from
+ * @param incrementType - Type of increment to apply
+ * @param existingTags - Array of existing tags
+ * @param maxAttempts - Maximum attempts to find a non-conflicting version
+ * @returns Version object with non-conflicting version
+ */
+export function findNextAvailableVersion(
+  baseVersion: Version, 
+  incrementType: PartToIncrement, 
+  existingTags: Array<any>, 
+  maxAttempts: number = 10
+): Version {
+  let currentVersion = new Version(baseVersion.major, baseVersion.minor, baseVersion.patch);
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Generate next version based on increment type
+    let nextVersion: Version;
+    switch (incrementType) {
+      case PartToIncrement.Major:
+        nextVersion = new Version(currentVersion.major + 1, 0, 0);
+        break;
+      case PartToIncrement.Minor:
+        nextVersion = new Version(currentVersion.major, currentVersion.minor + 1, 0);
+        break;
+      case PartToIncrement.Patch:
+        nextVersion = new Version(currentVersion.major, currentVersion.minor, currentVersion.patch + 1);
+        break;
+      default:
+        throw new ValidationError(`Invalid increment type: ${incrementType}`);
+    }
+
+    // Check if this version conflicts
+    const conflictCheck = checkDuplicateTag(existingTags, nextVersion.toString());
+    if (!conflictCheck.exists) {
+      return nextVersion;
+    }
+
+    // Move to next iteration
+    currentVersion = nextVersion;
+  }
+
+  throw new ValidationError(
+    `Unable to find a non-conflicting version after ${maxAttempts} attempts. ` +
+    `Consider manually specifying a version or resolving existing tag conflicts.`
+  );
+}
+
+/**
+ * Validates that a proposed tag name is safe to create
+ * @param tags - Array of existing tags
+ * @param proposedTag - Proposed tag name
+ * @param allowOverwrite - Whether to allow overwriting existing tags (default: false)
+ * @returns Validation result with conflict information
+ */
+export function validateTagSafety(
+  tags: Array<any>, 
+  proposedTag: string, 
+  allowOverwrite: boolean = false
+): { safe: boolean; conflictInfo?: DuplicateTagInfo; message: string } {
+  const conflictInfo = checkDuplicateTag(tags, proposedTag);
+  
+  if (!conflictInfo.exists) {
+    return {
+      safe: true,
+      message: `Tag ${proposedTag} is safe to create - no conflicts detected.`
+    };
+  }
+
+  if (allowOverwrite) {
+    return {
+      safe: true,
+      conflictInfo,
+      message: `Tag ${proposedTag} conflicts with existing tag ${conflictInfo.existingTag?.name}, but overwrite is allowed.`
+    };
+  }
+
+  return {
+    safe: false,
+    conflictInfo,
+    message: `Tag ${proposedTag} cannot be created due to conflicts. ${conflictInfo.suggestedResolution}`
+  };
+}
+
+/**
+ * Generates a safe tag name that doesn't conflict with existing tags
+ * @param baseVersion - Base version to start from
+ * @param incrementType - Type of increment to apply
+ * @param existingTags - Array of existing tags
+ * @param tagPrefix - Prefix for tags (e.g., 'v')
+ * @returns Safe tag name string
+ */
+export function generateSafeTagName(
+  baseVersion: Version, 
+  incrementType: PartToIncrement, 
+  existingTags: Array<any>, 
+  tagPrefix: string = 'v'
+): string {
+  try {
+    const safeVersion = findNextAvailableVersion(baseVersion, incrementType, existingTags);
+    return `${tagPrefix}${safeVersion.toString()}`;
+  } catch (error) {
+    // If we can't find a safe version, try with a timestamp suffix
+    const timestamp = new Date().getTime();
+    const fallbackVersion = new Version(baseVersion.major, baseVersion.minor, baseVersion.patch);
+    
+    switch (incrementType) {
+      case PartToIncrement.Major:
+        fallbackVersion.major++;
+        fallbackVersion.minor = 0;
+        fallbackVersion.patch = 0;
+        break;
+      case PartToIncrement.Minor:
+        fallbackVersion.minor++;
+        fallbackVersion.patch = 0;
+        break;
+      case PartToIncrement.Patch:
+        fallbackVersion.patch++;
+        break;
+    }
+    
+    return `${tagPrefix}${fallbackVersion.toString()}-${timestamp}`;
+  }
+}
+
 /**
  * Parses tag-bot comment and returns command details
  * @param body - Comment body to parse
@@ -105,7 +290,7 @@ export function createManualVersion(manualVersion: string): Version {
     throw new ValidationError(`Manual version must be a non-empty string, got ${typeof manualVersion}`);
   }
 
-  // Validate version format
+  // Validate the version format
   const versionPattern = /^\d+\.\d+\.\d+$/;
   if (!versionPattern.test(manualVersion)) {
     throw new ValidationError(`Invalid version format: must be in format x.y.z (e.g., 2.5.0), got ${manualVersion}`);
