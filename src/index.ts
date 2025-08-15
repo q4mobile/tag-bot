@@ -79,7 +79,19 @@ async function run(): Promise<void> {
     // Check if tagging should be skipped
     if (shouldSkip) {
       core.info("Tag creation skipped as requested. Exiting.");
+      
+      // Set outputs for skip case to help other actions understand what happened
       core.setOutput("skipped", "true");
+      core.setOutput("tag", ""); // No tag created
+      core.setOutput("previous_tag", ""); // No previous tag info
+      core.setOutput("increment_type", "skipped");
+      core.setOutput("version_source", "skipped");
+      core.setOutput("repository", `${repo.owner}/${repo.repo}`);
+      core.setOutput("pull_request", github.context.payload.pull_request!.number.toString());
+      core.setOutput("branch", github.context.payload.pull_request!.base.ref);
+      core.setOutput("action_timestamp", new Date().toISOString());
+      
+      core.info("GitHub Action outputs set for skip case");
       return;
     }
 
@@ -139,12 +151,38 @@ async function run(): Promise<void> {
         
         core.info(`Successfully created tag: ${tag.data.tag}`);
         core.info(`Tag reference created: ${ref.data.ref}`);
-        core.setOutput("tag", tag.data.tag);
-        core.setOutput("sha", tag.data.sha);
-        core.setOutput("increment_type", manualVersion ? "manual" : PartToIncrement[partToIncrement].toLowerCase());
+        
+        // Set comprehensive GitHub Action outputs
+        core.setOutput("tag", tag.data.tag);                    // Newly created tag
+        core.setOutput("previous_tag", lastTag.toString());     // Previous tag that was incremented from
+        core.setOutput("sha", tag.data.sha);                   // Commit SHA of the tag
+        core.setOutput("ref", ref.data.ref);                   // Git reference created
+        
+        // Version increment information
         if (manualVersion) {
+          core.setOutput("increment_type", "manual");
           core.setOutput("manual_version", manualVersion);
+          core.setOutput("version_source", "manual_specification");
+        } else {
+          core.setOutput("increment_type", PartToIncrement[partToIncrement].toLowerCase());
+          core.setOutput("version_source", "automatic_increment");
         }
+        
+        // Additional context outputs
+        core.setOutput("repository", `${repo.owner}/${repo.repo}`);
+        core.setOutput("pull_request", github.context.payload.pull_request!.number.toString());
+        core.setOutput("branch", github.context.payload.pull_request!.base.ref);
+        core.setOutput("action_timestamp", new Date().toISOString());
+        
+        // Log all outputs for debugging
+        core.info("GitHub Action outputs set:");
+        core.info(`  tag: ${tag.data.tag}`);
+        core.info(`  previous_tag: ${lastTag.toString()}`);
+        core.info(`  increment_type: ${manualVersion ? "manual" : PartToIncrement[partToIncrement].toLowerCase()}`);
+        core.info(`  sha: ${tag.data.sha}`);
+        core.info(`  repository: ${repo.owner}/${repo.repo}`);
+        core.info(`  pull_request: #${github.context.payload.pull_request!.number}`);
+        
       } catch (error) {
         logError(error as Error, "Tag creation");
         return;
