@@ -10,6 +10,9 @@
   "homepage": "",
   "author": "Q4",
   "license": "ISC",
+  "publishConfig": {
+    "registry": "https://artifacts.platform.q4inc.com/artifactory/api/npm/npm-capital-connect-platform-virtual/"
+  },
   "scripts": {
     "test": "jest",
     "build": "tsc",

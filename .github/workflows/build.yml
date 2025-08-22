@@ -23,14 +23,17 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-          registry-url: ${{ secrets.NPM_REGISTRY_URL}}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
+          registry-url: https://artifacts.platform.q4inc.com/artifactory/api/npm/npm-capital-connect-platform-virtual/
+          scope: '@q4inc'
+
+      - name: Setup npm authentication
+        run: |
+          echo "//artifacts.platform.q4inc.com/artifactory/api/npm/npm-capital-connect-platform-virtual/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+          echo "registry=https://artifacts.platform.q4inc.com/artifactory/api/npm/npm-capital-connect-platform-virtual/" >> ~/.npmrc
+          echo "always-auth=true" >> ~/.npmrc
 
       - name: Install Client Dependencies
-        run: npm install
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
+        run: npm ci --prefer-offline --no-audit
 
       - name: Run Unit Tests
         run: npm run test
