@@ -62,7 +62,10 @@ async function run(): Promise<void> {
     try {
       // Validate branch protection rules with retry
       const protectionResult = await withGitHubRetry(
-        () => validateBranchProtection(octokit, repo, github.context.payload.pull_request!.base.ref),
+        async () => {
+          await validateBranchProtection(octokit, repo, github.context.payload.pull_request!.base.ref);
+          return { data: "success" };
+        },
         { maxAttempts: 2, baseDelay: 2000 }, // Shorter retry for protection check
         "Branch protection validation"
       );

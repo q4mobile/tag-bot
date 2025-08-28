@@ -259,14 +259,14 @@ export async function withGitHubRetry<T>(
       
       // Check for rate limiting
       let rateLimitWait: number | null = null;
-      if (error.headers) {
-        const rateLimitInfo = extractRateLimitInfo(error.headers);
+      if (error && typeof error === 'object' && 'headers' in error && error.headers) {
+        const rateLimitInfo = extractRateLimitInfo(error.headers as any);
         rateLimitWait = shouldWaitForRateLimit(rateLimitInfo, error);
       }
       
       if (rateLimitWait && rateLimitWait > 0) {
         core.warning(`⏰ Rate limit detected. Waiting ${Math.ceil(rateLimitWait / 1000)}s before retry...`);
-        await new Promise(resolve => setTimeout(resolve, rateLimitWait));
+        await new Promise(resolve => setTimeout(resolve, rateLimitWait || 0));
         continue; // Retry immediately after rate limit wait
       }
       
@@ -535,7 +535,7 @@ export function validateTagName(tagName: string): void {
   }
   
   // Check for invalid characters in Git tag names
-  const invalidChars = /[~^:?*[\\]@{}]/;
+  const invalidChars = /[~^:?*[\]@{}\\]/;
   if (invalidChars.test(tagName)) {
     throw new ValidationError(`Tag name contains invalid characters: ${tagName}. Git tag names cannot contain: ~ ^ : ? * [ \\ ] @ { }`);
   }

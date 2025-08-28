@@ -39,7 +39,7 @@ describe("Utility Tests: parseCommentBody", () => {
     const expected = PartToIncrement.Major;
     const actual = parseCommentBody("/tag-bot major");
 
-    expect(actual).toEqual(expected);
+    expect(actual.incrementType).toEqual(expected);
   });
 
   test("2: [Given] I want to increment by minor [And] the pull request contains a comment with minor [Then] parseCommentBody should return PartToIncrement.Minor.", () => {
@@ -47,7 +47,7 @@ describe("Utility Tests: parseCommentBody", () => {
     const expected = PartToIncrement.Minor;
     const actual = parseCommentBody("/tag-bot minor");
 
-    expect(actual).toEqual(expected);
+    expect(actual.incrementType).toEqual(expected);
   });
 
   test("3: [Given] I want to increment by patch [And] the pull request contains a comment with patch [Then] parseCommentBody should return PartToIncrement.Patch.", () => {
@@ -55,7 +55,7 @@ describe("Utility Tests: parseCommentBody", () => {
     const expected = PartToIncrement.Patch;
     const actual = parseCommentBody("/tag-bot patch");
 
-    expect(actual).toEqual(expected);
+    expect(actual.incrementType).toEqual(expected);
   });
 
 });
