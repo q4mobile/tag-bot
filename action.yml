@@ -2,8 +2,40 @@ name: "Tag Bot"
 inputs:
   token:
     description: "GitHub token"
-    default: $
     required: true
+  required_checks:
+    description: "Comma-separated list of required status checks that must pass before tagging (e.g., 'ci,test,security')"
+    required: false
+    default: ""
+outputs:
+  tag:
+    description: "The newly created tag name (e.g., v1.2.0)"
+  previous_tag:
+    description: "The previous tag that was incremented from (e.g., v1.1.0)"
+  sha:
+    description: "The commit SHA that the tag points to"
+  ref:
+    description: "The Git reference created for the tag"
+  increment_type:
+    description: "Type of version increment: major, minor, patch, or manual"
+  version_source:
+    description: "Source of version: automatic_increment or manual_specification"
+  manual_version:
+    description: "Manual version specified (only present when increment_type is manual)"
+  repository:
+    description: "Repository name in format owner/repo"
+  pull_request:
+    description: "Pull request number that triggered the action"
+  branch:
+    description: "Target branch of the pull request"
+  action_timestamp:
+    description: "ISO timestamp when the action was executed"
+  skipped:
+    description: "Set to 'true' when tagging was skipped due to /tag-bot skip command"
+  duplicate_resolved:
+    description: "Set to 'true' when a duplicate tag was detected but resolved (same commit)"
+  existing_tag_sha:
+    description: "SHA of existing tag when duplicate is resolved (only present when duplicate_resolved is true)"
 runs:
   using: "node20"
   main: "dist/index.js"

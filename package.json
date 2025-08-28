@@ -4,12 +4,13 @@
   "description": "",
   "main": "dist/index.js",
   "engines": {
-    "node": "18.18.2"
+    "node": ">=18.0.0"
   },
   "keywords": [],
   "homepage": "",
   "author": "Q4",
   "license": "ISC",
+
   "scripts": {
     "test": "jest",
     "build": "tsc",
